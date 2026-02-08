@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "legi-route"
+version = "0.1.0"
+description = "RAG system for French Traffic Law (Code de la Route)"
+authors = ["Sami Contesenne <sami.contesenne496@gmail.com>"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+pydantic = "^2.10.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+black = "^24.2.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
