@@ -14,26 +14,16 @@ from pathlib import Path
 from typing import List, Optional
 from lxml import etree
 
+from src.config import settings
 from src.models import TrafficLawArticle
 
-# --- Configuration ---
+# --- Logging ---
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger(__name__)
-
-# --- Paths ---
-CURRENT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = CURRENT_DIR.parent.parent
-
-RAW_DATA_DIR = (
-    PROJECT_ROOT / "data" / "raw" / "LEGI" / "TEXT"
-    / "00" / "00" / "06" / "07" / "42"
-    / "LEGITEXT000006074228" / "article"
-) # This is the path to "code de la route" articles in the DILA dump.
-OUTPUT_FILE = PROJECT_ROOT / "data" / "processed" / "code_route_articles.json"
 
 
 def clean_text(text_list: List[str]) -> str:
@@ -81,7 +71,6 @@ def parse_xml_file(filepath: Path) -> Optional[TrafficLawArticle]:
 
         # Strategy B: Fallback (direct CONTENU) if BLOC_TEXTUEL is missing
         if not content_text:
-            logger.warning(f"No BLOC_TEXTUEL found in {filepath.name}. Attempting fallback extraction.")
             contenu_node = root.find(".//CONTENU")
             if contenu_node is not None:
                 content_text = clean_text(contenu_node.itertext())
@@ -149,17 +138,18 @@ def process_directory(source_dir: Path) -> List[TrafficLawArticle]:
 
 def main():
     """Entry point for the parsing script."""
-    articles = process_directory(RAW_DATA_DIR)
+    articles = process_directory(settings.RAW_DATA_DIR)
 
     if articles:
-        OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        output_file = settings.PROCESSED_FILE
+        output_file.parent.mkdir(parents=True, exist_ok=True)
 
         try:
-            with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 data_to_save = [article.model_dump() for article in articles]
                 json.dump(data_to_save, f, ensure_ascii=False, indent=2)
 
-            logger.info(f"Successfully saved {len(articles)} articles to {OUTPUT_FILE}")
+            logger.info(f"Successfully saved {len(articles)} articles to {output_file}")
 
         except IOError as e:
             logger.error(f"Failed to write output file: {e}")
