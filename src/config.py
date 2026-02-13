@@ -53,7 +53,12 @@ class Settings(BaseSettings):
     RETRY_MAX_WAIT: int = 120
 
     # --- Retrieval ---
-    DEFAULT_TOP_K: int = 5 
+    DEFAULT_TOP_K: int = 5
+
+    # --- Generation ---
+    GENERATION_MODEL: str = "models/gemini-2.5-flash"
+    GENERATION_TEMPERATURE: float = 0.0 # Deterministic output for legal Q&A
+    GENERATION_MAX_TOKENS: int = 1000
 
     model_config = {
         "env_file": ".env",
