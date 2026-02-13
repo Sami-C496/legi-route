@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # --- API ---
     GOOGLE_API_KEY: str = Field(
         default="",
-        description="GOOGLE API KEY."
+        description="Google AI Studio API key."
     )
 
     # --- Paths ---
@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     MAX_RETRIES: int = 20
     RETRY_MIN_WAIT: int = 10
     RETRY_MAX_WAIT: int = 120
+
+    # --- Retrieval ---
+    DEFAULT_TOP_K: int = 5 
 
     model_config = {
         "env_file": ".env",
