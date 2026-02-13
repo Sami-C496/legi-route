@@ -137,7 +137,7 @@ if __name__ == "__main__":
 
     try:
         retriever = TrafficRetriever()
-        test_query = "Quelle est la vitesse sur autoroute par tmps de pluie ?"
+        test_query = "Quelle est la vitesse sur autoroute par temps de pluie ?"
         print(f"\nTesting search with: '{test_query}'")
 
         results = retriever.search(test_query, k=3)
