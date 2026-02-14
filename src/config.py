@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     # --- Generation ---
     GENERATION_MODEL: str = "models/gemini-2.5-flash"
     GENERATION_TEMPERATURE: float = 0.0
-    GENERATION_MAX_TOKENS: int = 1000
+    GENERATION_MAX_TOKENS: int = 2048
 
     # --- Intent Classification ---
     CLASSIFIER_MODEL: str = "models/gemini-2.5-flash-lite"
