@@ -54,11 +54,19 @@ class Settings(BaseSettings):
 
     # --- Retrieval ---
     DEFAULT_TOP_K: int = 5
+    RELEVANCE_THRESHOLD: float = 1.1
 
     # --- Generation ---
     GENERATION_MODEL: str = "models/gemini-2.5-flash"
-    GENERATION_TEMPERATURE: float = 0.0 # Deterministic output for legal Q&A
+    GENERATION_TEMPERATURE: float = 0.0
     GENERATION_MAX_TOKENS: int = 1000
+
+    # --- Chitchat Detection ---
+    CHITCHAT_KEYWORDS: list[str] = [
+        "bonjour", "salut", "hello", "qui es-tu",
+        "tu es qui", "ton nom", "merci"
+    ]
+    MAX_CHITCHAT_LENGTH: int = 30
 
     model_config = {
         "env_file": ".env",
