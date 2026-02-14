@@ -110,13 +110,15 @@ class TrafficRetriever:
             for i in range(num_results):
                 try:
                     meta = results['metadatas'][0][i]
-                    content = results['documents'][0][i]
                     distance = results['distances'][0][i] if results['distances'] else 0.0
+
+                    # Prefer raw content from metadata; fall back to blob document
+                    raw_content = meta.get('content') or results['documents'][0][i]
 
                     article = TrafficLawArticle(
                         id=meta.get('article_id', 'unknown'),
                         article_number=meta.get('num', 'N/A'),
-                        content=content,
+                        content=raw_content,
                         context=meta.get('category', 'Code de la Route'),
                         url=meta.get('url')
                     )

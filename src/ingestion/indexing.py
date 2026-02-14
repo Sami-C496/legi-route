@@ -122,6 +122,7 @@ def main():
             "article_id": a.id,
             "num": a.article_number,
             "category": a.context,
+            "content": a.content,
             "url": a.full_url
         } for a in new_articles]
 
