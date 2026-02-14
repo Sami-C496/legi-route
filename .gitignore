@@ -6,6 +6,7 @@ venv/
 # Data (large files)
 data/raw/
 data/chroma_db/
+# data/processed/ is tracked (enables reproduction without raw XML dump)
 
 # Python
 __pycache__/
