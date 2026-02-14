@@ -62,20 +62,20 @@ class TestResultRehydration:
 
     def test_preserves_full_content(self):
         """
-        NOTE: Currently, 'content' stored in Chroma is the blob_for_embedding,
-        not the raw article text. This test documents the current behavior.
-        See retrieval.py — this is a known limitation.
+        The retriever now uses raw content from metadata, not the blob.
+        This ensures the article text is clean and readable.
         """
-        blob = "Code de la route > Livre IV \nArticle R413-17 : Vitesse limitée à 130."
+        content = "Vitesse limitée à 130 km/h sur autoroute."
 
         article = TrafficLawArticle(
             id="LEGIARTI000006841575",
             article_number="R413-17",
-            content=blob,
+            content=content,
             context="Code de la route > Livre IV",
         )
 
-        assert "Article R413-17" in article.content
+        assert "130 km/h" in article.content
+        assert "Livre IV" not in article.content  # context is separate
 
 
 # ============================================================
