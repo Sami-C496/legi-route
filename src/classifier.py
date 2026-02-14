@@ -91,7 +91,7 @@ class IntentClassifier:
                 config=types.GenerateContentConfig(
                     system_instruction=CLASSIFICATION_PROMPT,
                     temperature=0.0,
-                    max_output_tokens=20,
+                    max_output_tokens=50,
                     response_mime_type="application/json",
                     response_schema=INTENT_SCHEMA,
                 )
