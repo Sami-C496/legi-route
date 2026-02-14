@@ -2,9 +2,9 @@
 LégiRoute — Streamlit Frontend.
 
 Orchestrates user interaction with the RAG system:
+- LLM-based intent classification for query routing
 - Real-time streaming responses
 - Source transparency (expandable citations)
-- Chitchat detection to save API calls
 """
 
 import streamlit as st
@@ -17,10 +17,11 @@ sys.path.append(str(PROJECT_ROOT))
 
 try:
     from src.config import settings
+    from src.classifier import IntentClassifier, Intent
     from src.retrieval import TrafficRetriever
     from src.generation import TrafficGenerator
 except ImportError:
-    st.error("Import Error: Please run the app from the project root using 'poetry run streamlit run src/app.py'")
+    st.error("❌ Import Error: Please run the app from the project root using 'poetry run streamlit run src/app.py'")
     st.stop()
 
 # --- Page Configuration ---
@@ -42,35 +43,24 @@ st.title("⚖️ LégiRoute")
 st.caption("Assistant Juridique Intelligent — Code de la Route Français")
 
 
-# --- Chitchat Detection (extracted for testability) ---
-def is_chitchat(prompt: str) -> bool:
-    """
-    Heuristic to detect non-legal conversational messages.
-    Saves Vector Search + LLM costs by short-circuiting the pipeline.
-    """
-    return (
-        any(kw in prompt.lower() for kw in settings.CHITCHAT_KEYWORDS)
-        and len(prompt) < settings.MAX_CHITCHAT_LENGTH
-    ) #TODO improve this with a zero shot classifier or a more robust heuristic
-
-
 # --- System Initialization (Cached) ---
 @st.cache_resource
 def load_system_components():
-    """Initializes Retriever and Generator. Returns None if DB missing."""
+    """Initializes all RAG components. Returns None if DB missing."""
     db_path = settings.CHROMA_DB_PATH
     if not db_path.exists():
-        return None, None
+        return None, None, None
 
+    classifier_instance = IntentClassifier()
     retriever_instance = TrafficRetriever(db_path=str(db_path))
     generator_instance = TrafficGenerator()
-    return retriever_instance, generator_instance
+    return classifier_instance, retriever_instance, generator_instance
 
 
-retriever, generator = load_system_components()
+classifier, retriever, generator = load_system_components()
 
 if not retriever:
-    st.warning("Database not found. Run: `poetry run python src/ingestion/indexing.py`")
+    st.warning("⚠️ Database not found. Run: `poetry run python src/ingestion/indexing.py`")
     st.stop()
 
 # --- Session State ---
@@ -98,14 +88,22 @@ if prompt := st.chat_input("Ex: Quelle est la sanction pour un téléphone au vo
 
         relevant_docs = []
 
-        # --- Retrieval (skip for chitchat) ---
-        if not is_chitchat(prompt):
+        # --- Intent Classification ---
+        intent = classifier.classify(prompt)
+
+        if intent == Intent.OFF_TOPIC:
+            full_response = "Je suis spécialisé dans le Code de la Route français. Je ne peux pas répondre à cette question, mais n'hésitez pas à me poser une question sur le droit routier français !"
+
+        elif intent == Intent.LEGAL_QUERY:
+            # Full RAG pipeline
             with st.spinner("Analyse de la jurisprudence..."):
                 results = retriever.search(prompt, k=3)
                 relevant_docs = [
                     r for r in results
                     if r.score < settings.RELEVANCE_THRESHOLD
                 ]
+
+        # intent == CHITCHAT → relevant_docs stays empty, generator handles naturally
 
         # --- Display Sources ---
         if relevant_docs:
@@ -117,15 +115,15 @@ if prompt := st.chat_input("Ex: Quelle est la sanction pour un téléphone au vo
                     st.divider()
 
         # --- Generation (Streaming) ---
-        try:
-            for chunk in generator.generate_stream(prompt, relevant_docs):
-                full_response += chunk
-                message_placeholder.markdown(full_response + "▌")
+        if not full_response:
+            try:
+                for chunk in generator.generate_stream(prompt, relevant_docs):
+                    full_response += chunk
+                    message_placeholder.markdown(full_response + "▌")
+            except Exception as e:
+                st.error(f"Generation Error: {e}")
+                full_response = "Une erreur est survenue lors de la génération."
 
-            message_placeholder.markdown(full_response)
-
-        except Exception as e:
-            st.error(f"Generation Error: {e}")
-            full_response = "Une erreur est survenue lors de la génération."
+        message_placeholder.markdown(full_response)
 
     st.session_state.messages.append({"role": "assistant", "content": full_response})
