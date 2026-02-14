@@ -61,12 +61,8 @@ class Settings(BaseSettings):
     GENERATION_TEMPERATURE: float = 0.0
     GENERATION_MAX_TOKENS: int = 1000
 
-    # --- Chitchat Detection ---
-    CHITCHAT_KEYWORDS: list[str] = [
-        "bonjour", "salut", "hello", "qui es-tu",
-        "tu es qui", "ton nom", "merci"
-    ]
-    MAX_CHITCHAT_LENGTH: int = 30
+    # --- Intent Classification ---
+    CLASSIFIER_MODEL: str = "models/gemini-2.5-flash-lite"
 
     model_config = {
         "env_file": ".env",
