@@ -2,33 +2,28 @@
 Tests for the generation module (generation.py).
 
 Strategy: We test the prompt construction and context formatting logic
-WITHOUT calling the real Gemini API. The LLM is an external dependency —
-we validate everything we control (prompt quality, context assembly).
+WITHOUT calling the real LLM API. The provider is mocked — we validate
+everything we control (prompt quality, context assembly).
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
+from src.providers import LLMProvider
 from src.models import TrafficLawArticle, RetrievalResult
-from src.generation import TrafficGenerator
+from src.generation import TrafficGenerator, SYSTEM_PROMPT
 
 
 # --- Fixtures ---
 
 @pytest.fixture
-def mock_generator():
-    """
-    Creates a TrafficGenerator without a real API key.
-    We patch both settings and the genai Client to avoid any network call.
-    """
-    with patch("src.generation.settings") as mock_settings:
-        mock_settings.GOOGLE_API_KEY = "test-key-fake"
-        mock_settings.GENERATION_MODEL = "models/gemini-2.5-flash"
-        mock_settings.GENERATION_TEMPERATURE = 0.0
-        mock_settings.GENERATION_MAX_TOKENS = 1000
-        with patch("src.generation.genai.Client"):
-            generator = TrafficGenerator()
-    return generator
+def mock_provider():
+    return MagicMock(spec=LLMProvider)
+
+
+@pytest.fixture
+def generator(mock_provider):
+    return TrafficGenerator(mock_provider)
 
 
 @pytest.fixture
@@ -62,18 +57,15 @@ class TestSystemPrompt:
     Any change here directly affects answer quality.
     """
 
-    def test_prompt_defines_identity(self, mock_generator):
-        prompt = mock_generator._build_system_prompt()
-        assert "LégiRoute" in prompt
+    def test_prompt_defines_identity(self):
+        assert "LégiRoute" in SYSTEM_PROMPT
 
-    def test_prompt_enforces_citations(self, mock_generator):
-        prompt = mock_generator._build_system_prompt()
-        assert "citer" in prompt.lower() or "citation" in prompt.lower()
+    def test_prompt_enforces_citations(self):
+        assert "citer" in SYSTEM_PROMPT.lower() or "citation" in SYSTEM_PROMPT.lower()
 
-    def test_prompt_sets_limits_on_non_legal_queries(self, mock_generator):
+    def test_prompt_sets_limits_on_non_legal_queries(self):
         """Chitchat questions should not trigger fake citations."""
-        prompt = mock_generator._build_system_prompt()
-        assert "juridique" in prompt.lower() or "loi" in prompt.lower()
+        assert "juridique" in SYSTEM_PROMPT.lower() or "loi" in SYSTEM_PROMPT.lower()
 
 
 # ============================================================
@@ -87,36 +79,36 @@ class TestContextFormatting:
     affects whether the model can locate and cite the right article.
     """
 
-    def test_empty_results_returns_no_article_message(self, mock_generator):
-        context = mock_generator._format_context([])
+    def test_empty_results_returns_no_article_message(self, generator):
+        context = generator._format_context([])
         assert "AUCUN ARTICLE" in context
 
-    def test_includes_article_numbers(self, mock_generator, sample_results):
-        context = mock_generator._format_context(sample_results)
+    def test_includes_article_numbers(self, generator, sample_results):
+        context = generator._format_context(sample_results)
         assert "R413-17" in context
         assert "R413-2" in context
 
-    def test_includes_article_content(self, mock_generator, sample_results):
-        context = mock_generator._format_context(sample_results)
+    def test_includes_article_content(self, generator, sample_results):
+        context = generator._format_context(sample_results)
         assert "130 km/h" in context
         assert "50 km/h" in context
 
-    def test_includes_legifrance_urls(self, mock_generator, sample_results):
-        context = mock_generator._format_context(sample_results)
+    def test_includes_legifrance_urls(self, generator, sample_results):
+        context = generator._format_context(sample_results)
         assert "legifrance.gouv.fr" in context
 
-    def test_includes_context_hierarchy(self, mock_generator, sample_results):
-        context = mock_generator._format_context(sample_results)
+    def test_includes_context_hierarchy(self, generator, sample_results):
+        context = generator._format_context(sample_results)
         assert "Livre IV" in context
 
-    def test_sources_are_numbered(self, mock_generator, sample_results):
+    def test_sources_are_numbered(self, generator, sample_results):
         """Numbered sources help the LLM reference specific articles."""
-        context = mock_generator._format_context(sample_results)
+        context = generator._format_context(sample_results)
         assert "SOURCE 1" in context
         assert "SOURCE 2" in context
 
-    def test_single_result_formatting(self, mock_generator, sample_results):
+    def test_single_result_formatting(self, generator, sample_results):
         """Edge case: only one result should still format correctly."""
-        context = mock_generator._format_context(sample_results[:1])
+        context = generator._format_context(sample_results[:1])
         assert "SOURCE 1" in context
         assert "SOURCE 2" not in context

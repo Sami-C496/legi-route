@@ -78,7 +78,7 @@ class TestComputedFields:
     def test_blob_format_is_deterministic(self, sample_article):
         """The blob must be reproducible — same input = same vector."""
         expected = (
-            f"{sample_article.context} \n"
+            f"{sample_article.context}\n"
             f"Article {sample_article.article_number} : {sample_article.content}"
         )
         assert sample_article.blob_for_embedding == expected
