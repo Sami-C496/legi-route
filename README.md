@@ -131,6 +131,14 @@ The classifier uses Gemini's `response_schema` with `response_mime_type="applica
 
 **Content/blob separation**: the retriever stores raw content separately in Chroma metadata. The embedding blob (context + article + content concatenated) is the indexing input, but `meta.get('content')` is what gets displayed and sent to the generator. This clean separation means the LLM receives well-structured sources (path, content, URL as separate fields) instead of a monolithic blob.
 
+### Chunking: one article = one chunk
+
+Most articles in the Code de la Route are short: median length is 103 words, and 95% of articles are under 500 words. Splitting them further would break the legal atomicity of each article and make citation harder (the LLM needs to cite "R413-17", not "R413-17 chunk 2 of 4").
+
+The current approach embeds each article as a single chunk. Only 9 articles out of 1161 exceed 1000 words, so the trade-off is acceptable.
+
+If the system is extended to cover other legal codes (e.g., Code pénal, which the Code de la Route frequently cites), a different chunking strategy will be needed since those codes contain much longer articles.
+
 ### ChromaDB with L2 distance + relevance threshold
 
 ChromaDB was chosen for simplicity: embedded persistence, no external service to run, Python-native.
