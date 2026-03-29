@@ -17,6 +17,10 @@ tenacity = "^9.1.2"
 google-genai = "^1.61.0"
 tqdm = "^4.67.0"
 streamlit = "^1.54.0"
+ragas = "^0.4.3"
+langchain-google-genai = "^4.2.1"
+openai = "^2.21.0"
+litellm = "^1.81.13"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"

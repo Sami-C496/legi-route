@@ -1,0 +1,62 @@
+query,category,difficulty
+Quelle est la vitesse maximale autorisée sur autoroute ?,vitesse,easy
+Quelle est la limite de vitesse en agglomération ?,vitesse,easy
+Quelle est la vitesse maximale par temps de pluie sur autoroute ?,vitesse,medium
+Quel est le taux d'alcoolémie maximum autorisé au volant ?,alcool,easy
+Quel est le taux d'alcool autorisé pour un jeune conducteur ?,alcool,medium
+Est-il obligatoire de porter la ceinture de sécurité ?,equipement,easy
+Peut-on utiliser son téléphone au volant ?,infraction,easy
+Quels sont les équipements obligatoires dans un véhicule ?,equipement,medium
+Quelle est la distance de sécurité entre deux véhicules ?,conduite,medium
+Quelles sont les règles de priorité à droite ?,priorite,medium
+Peut-on dépasser par la droite sur autoroute ?,depassement,medium
+Quelles sont les sanctions pour un excès de vitesse de plus de 50 km/h ?,sanction,hard
+Quelle est la vitesse maximale pour un conducteur novice sur autoroute ?,vitesse,medium
+Quand doit-on allumer ses feux de croisement ?,eclairage,easy
+Quelle est la réglementation sur le stationnement en double file ?,stationnement,medium
+Quelle est la différence juridique entre un arrêt et un stationnement ?,stationnement,hard
+Un véhicule à l'arrêt peut-il laisser tourner son moteur ?,pollution,medium
+Est-il autorisé de franchir une ligne blanche pour dépasser un vélo ?,depassement,hard
+Quelle est la distance latérale de sécurité pour dépasser un cycliste en ville ?,depassement,medium
+Quelle est la distance latérale de sécurité pour dépasser un cycliste hors agglomération ?,depassement,medium
+Les cyclistes ont-ils le droit de passer au feu rouge ?,priorite,hard
+Qu'est-ce que le panneau M12 pour les cyclistes ?,signalisation,hard
+Quelle est la vitesse maximale autorisée pour une trottinette électrique ?,EDPM,medium
+Le port du casque est-il obligatoire en trottinette électrique ?,EDPM,medium
+A-t-on le droit de circuler sur le trottoir avec une trottinette électrique ?,EDPM,easy
+Peut-on transporter un passager sur une trottinette électrique ?,EDPM,medium
+Quelle sanction pour le refus de priorité à un piéton ?,sanction,hard
+Combien de points retire-t-on pour l'usage du téléphone tenu en main ?,sanction,medium
+Peut-on conduire avec des écouteurs ou un casque audio ?,infraction,easy
+Quelle est la sanction pour conduite sous l'empire de stupéfiants ?,sanction,hard
+Le refus de se soumettre au dépistage de stupéfiants est-il un délit ?,sanction,medium
+Est-il obligatoire d'avoir un éthylotest dans sa voiture ?,equipement,medium
+Le gilet de haute visibilité doit-il être dans l'habitacle ou le coffre ?,equipement,medium
+Quelles sont les règles de circulation dans une zone de rencontre ?,circulation,medium
+Quelle est la vitesse limite dans une zone 30 ?,vitesse,easy
+Qui est prioritaire dans une zone de rencontre ?,priorite,medium
+Peut-on stationner devant une entrée carrossable (bateau) ?,stationnement,medium
+Quelle est la différence entre un stationnement gênant et très gênant ?,stationnement,hard
+Quel est le montant de l'amende pour un stationnement sur une place handicapé ?,sanction,medium
+Doit-on céder le passage aux bus qui quittent leur arrêt ?,priorite,medium
+Comment utiliser la voie de gauche sur une autoroute à 3 voies ?,conduite,medium
+Est-il permis de faire des appels de phares pour avertir d'un danger ?,eclairage,medium
+Quelles sont les restrictions de circulation lors d'un pic de pollution ?,environment,medium
+Qu'est-ce que la vignette Crit'Air ?,environment,easy
+Les pneus hiver sont-ils obligatoires en montagne ?,equipement,medium
+Qu'est-ce que la Loi Montagne II ?,equipement,hard
+Peut-on fumer en voiture en présence d'un mineur ?,infraction,medium
+Quelle est la vitesse maximale sur le périphérique parisien ?,vitesse,medium
+À quelle vitesse doit-on rouler si la visibilité est inférieure à 50 mètres ?,vitesse,hard
+Peut-on klaxonner en ville ?,infraction,easy
+Dans quels cas l'usage de l'avertisseur sonore est-il autorisé en agglomération ?,infraction,medium
+Un permis de conduire probatoire possède combien de points initialement ?,permis,medium
+Au bout de combien de temps récupère-t-on un point perdu ?,permis,medium
+Quelle est la durée de validité du permis de conduire format carte de crédit ?,administratif,medium
+Peut-on conduire pieds nus ou en tongs ?,conduite,hard
+Que risque-t-on à conduire sans assurance ?,sanction,hard
+Quelles sont les règles pour le transport d'enfants de moins de 10 ans ?,passager,medium
+Peut-on installer un siège bébé dos à la route à l'avant ?,passager,medium
+Quelle est la signification d'un feu jaune clignotant en bas du feu tricolore ?,signalisation,medium
+Que signifie une ligne de dissuasion ?,signalisation,medium
+A-t-on le droit de rouler sur la bande d'arrêt d'urgence ?,infraction,easy
