@@ -1,160 +1,95 @@
-"""
-XML Parser for Légifrance LEGI Dataset.
-
-Parses raw XML files from the DILA data dump, validates them against
-the Pydantic schema, and outputs a clean JSON dataset.
-
-Only articles with ETAT == "VIGUEUR" (currently enforced) are retained.
-"""
-
 import os
 import json
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 from lxml import etree
 
 from src.config import settings
 from src.models import TrafficLawArticle
 
-# --- Logging ---
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def clean_text(text_list: List[str]) -> str:
-    """
-    Sanitizes and concatenates a list of text fragments.
-
-    Args:
-        text_list: A list of strings extracted from XML nodes.
-
-    Returns:
-        A single cleaned string with normalized whitespace.
-    """
+def clean_text(text_list: list[str]) -> str:
     if not text_list:
         return ""
-    full_text = " ".join(text_list)
-    return " ".join(full_text.split())
+    return " ".join(" ".join(text_list).split())
 
 
 def parse_xml_file(filepath: Path) -> Optional[TrafficLawArticle]:
-    """
-    Parses a single Légifrance XML file into a validated TrafficLawArticle.
-
-    Returns None if the article is not in VIGUEUR status, has empty content,
-    or contains malformed XML.
-    """
     try:
         tree = etree.parse(str(filepath))
         root = tree.getroot()
 
-        # 1. STATUS CHECK — Only currently enforced laws
-        etat = root.findtext(".//META_ARTICLE/ETAT")
-        if etat != "VIGUEUR":
+        if root.findtext(".//META_ARTICLE/ETAT") != "VIGUEUR":
             return None
 
-        # 2. EXTRACT METADATA
         article_id = root.findtext(".//META_COMMUN/ID")
         num = root.findtext(".//META_ARTICLE/NUM")
 
-        # 3. EXTRACT CONTENT
-        # Strategy A: Standard structure (BLOC_TEXTUEL wrapper)
         content_text = ""
-        bloc_textuel = root.find(".//BLOC_TEXTUEL")
-        if bloc_textuel is not None:
-            content_text = clean_text(bloc_textuel.itertext())
+        bloc = root.find(".//BLOC_TEXTUEL")
+        if bloc is not None:
+            content_text = clean_text(list(bloc.itertext()))
 
-        # Strategy B: Fallback (direct CONTENU) if BLOC_TEXTUEL is missing
         if not content_text:
-            contenu_node = root.find(".//CONTENU")
-            if contenu_node is not None:
-                content_text = clean_text(contenu_node.itertext())
+            contenu = root.find(".//CONTENU")
+            if contenu is not None:
+                content_text = clean_text(list(contenu.itertext()))
 
-        # 4. RECONSTRUCT CONTEXT HIERARCHY
         parents = []
-        contexte_node = root.find(".//CONTEXTE")
-        if contexte_node is not None:
-            for text_node in contexte_node.itertext():
-                clean_t = text_node.strip()
-                if clean_t:
-                    parents.append(clean_t)
+        ctx = root.find(".//CONTEXTE")
+        if ctx is not None:
+            parents = [t.strip() for t in ctx.itertext() if t.strip()]
 
-        full_path_list = [p.strip() for p in parents]
-        context_str = " > ".join(full_path_list) if full_path_list else "Code de la Route"
+        context_str = " > ".join(parents) if parents else "Code de la Route"
 
-        # 5. VALIDATION via Pydantic (rejects empty/short content)
-        article = TrafficLawArticle(
+        return TrafficLawArticle(
             id=article_id,
             article_number=num,
             content=content_text,
-            context=context_str
+            context=context_str,
         )
-        return article
 
     except etree.XMLSyntaxError:
-        logger.error(f"XML Syntax Error in file: {filepath}")
         return None
     except ValueError:
-        # Pydantic validation failure (e.g., content too short)
         return None
     except Exception as e:
-        logger.error(f"Unexpected error parsing {filepath.name}: {e}", exc_info=True)
+        logger.error(f"Error parsing {filepath.name}: {e}")
         return None
 
 
-def process_directory(source_dir: Path) -> List[TrafficLawArticle]:
-    """Recursively processes a directory of XML files."""
+def process_directory(source_dir: Path) -> list[TrafficLawArticle]:
     articles = []
-    file_count = 0
-
     if not source_dir.exists():
-        logger.critical(f"Source directory does not exist: {source_dir}")
         return []
-
-    logger.info(f"Starting ingestion from: {source_dir}")
 
     for root, _, files in os.walk(source_dir):
         for filename in files:
             if filename.endswith(".xml"):
-                file_count += 1
-                filepath = Path(root) / filename
-
-                article = parse_xml_file(filepath)
+                article = parse_xml_file(Path(root) / filename)
                 if article:
                     articles.append(article)
 
-                if file_count % 1000 == 0:
-                    logger.info(f"Processed {file_count} files... Collected {len(articles)} articles.")
-
-    logger.info(f"Ingestion complete. Processed {file_count} files.")
-    logger.info(f"Total valid articles retained: {len(articles)}")
+    logger.info(f"Parsed {len(articles)} valid articles.")
     return articles
 
 
 def main():
-    """Entry point for the parsing script."""
     articles = process_directory(settings.RAW_DATA_DIR)
+    if not articles:
+        return
 
-    if articles:
-        output_file = settings.PROCESSED_FILE
-        output_file.parent.mkdir(parents=True, exist_ok=True)
+    output = settings.PROCESSED_FILE
+    output.parent.mkdir(parents=True, exist_ok=True)
 
-        try:
-            with open(output_file, "w", encoding="utf-8") as f:
-                data_to_save = [article.model_dump() for article in articles]
-                json.dump(data_to_save, f, ensure_ascii=False, indent=2)
+    with open(output, "w", encoding="utf-8") as f:
+        json.dump([a.model_dump() for a in articles], f, ensure_ascii=False, indent=2)
 
-            logger.info(f"Successfully saved {len(articles)} articles to {output_file}")
-
-        except IOError as e:
-            logger.error(f"Failed to write output file: {e}")
-    else:
-        logger.warning("No articles were found or processed. JSON file was not created.")
+    logger.info(f"Saved {len(articles)} articles to {output}")
 
 
 if __name__ == "__main__":
