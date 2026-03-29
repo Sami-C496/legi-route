@@ -8,7 +8,7 @@ sys.path.append(str(PROJECT_ROOT))
 from src.config import settings
 from src.classifier import Intent
 
-st.set_page_config(page_title="LégiRoute AI", page_icon="⚖️", layout="centered")
+st.set_page_config(page_title="LégiRoute AI", page_icon="⚖️", layout="wide")
 st.title("⚖️ LégiRoute")
 st.caption("Assistant Juridique — Code de la Route Français")
 
@@ -59,9 +59,8 @@ if prompt := st.chat_input("Ex: Sanction pour téléphone au volant ?"):
                 if sources:
                     with st.expander(f"📚 {len(sources)} articles consultés"):
                         for r in sources:
-                            st.markdown(f"**{r.article.article_number}**")
+                            st.markdown(f"[**{r.article.article_number}**]({r.article.full_url})")
                             st.caption(r.article.content[:250] + "...")
-                            st.markdown(f"[Légifrance]({r.article.full_url})")
                             st.divider()
 
             for chunk in rag.generator.generate_stream(prompt, sources):
