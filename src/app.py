@@ -17,15 +17,13 @@ st.caption("Assistant Juridique — Code de la Route Français")
 def load_rag():
     from src.rag import RAG
     if not settings.CHROMA_DB_PATH.exists():
-        return None
+        from src.ingestion.indexing import main as run_indexing
+        run_indexing()
     return RAG()
 
 
-rag = load_rag()
-
-if not rag:
-    st.warning("⚠️ Base de données introuvable. Lancez: `poetry run python src/ingestion/indexing.py`")
-    st.stop()
+with st.spinner("Chargement de la base juridique..."):
+    rag = load_rag()
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
