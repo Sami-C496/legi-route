@@ -1,28 +1,27 @@
-"""
-Centralized Configuration for the LégiRoute RAG system.
-
-All runtime constants and paths shared across modules are defined here.
-This avoids scattering magic values across the codebase.
-
-Usage:
-    from src.config import settings
-"""
-
+from enum import Enum
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import Field
 
 
+class Provider(str, Enum):
+    GEMINI = "gemini"
+
+
+PROVIDER_MODELS = {
+    Provider.GEMINI: {
+        "classifier": "models/gemini-2.5-flash-lite",
+        "generation": "models/gemini-2.5-flash",
+        "embedding": "gemini-embedding-001",
+    },
+}
+
+
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables and defaults."""
 
-    # --- API ---
-    GOOGLE_API_KEY: str = Field(
-        default="",
-        description="Google AI Studio API key."
-    )
+    GOOGLE_API_KEY: str = ""
+    PROVIDER: Provider = Provider.GEMINI
 
-    # --- Paths ---
     PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 
     @property
@@ -41,28 +40,36 @@ class Settings(BaseSettings):
     def CHROMA_DB_PATH(self) -> Path:
         return self.PROJECT_ROOT / "data" / "chroma_db"
 
-    # --- Vector Database ---
-    COLLECTION_NAME: str = "traffic_law_v1"
-    EMBEDDING_MODEL: str = "gemini-embedding-001"
+    @property
+    def CLASSIFIER_MODEL(self) -> str:
+        return PROVIDER_MODELS[self.PROVIDER]["classifier"]
 
-    # --- Indexing Pipeline ---
+    @property
+    def GENERATION_MODEL(self) -> str:
+        return PROVIDER_MODELS[self.PROVIDER]["generation"]
+
+    @property
+    def EMBEDDING_MODEL(self) -> str:
+        return PROVIDER_MODELS[self.PROVIDER]["embedding"]
+
+    @property
+    def COLLECTION_NAME(self) -> str:
+        return "traffic_law_v1"
+
+    # Indexing
     BATCH_SIZE: int = 5
     SLEEP_BETWEEN_BATCHES: int = 5
     MAX_RETRIES: int = 20
     RETRY_MIN_WAIT: int = 10
     RETRY_MAX_WAIT: int = 120
 
-    # --- Retrieval ---
+    # Retrieval
     DEFAULT_TOP_K: int = 5
     RELEVANCE_THRESHOLD: float = 1.1
 
-    # --- Generation ---
-    GENERATION_MODEL: str = "models/gemini-2.5-flash"
+    # Generation
     GENERATION_TEMPERATURE: float = 0.0
     GENERATION_MAX_TOKENS: int = 2048
-
-    # --- Intent Classification ---
-    CLASSIFIER_MODEL: str = "models/gemini-2.5-flash-lite"
 
     model_config = {
         "env_file": ".env",
