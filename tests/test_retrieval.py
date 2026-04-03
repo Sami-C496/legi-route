@@ -1,8 +1,8 @@
 """
 Tests for the retrieval module (retrieval.py).
 
-Strategy: We test the result serialization logic (Chroma raw data → domain objects)
-without requiring a live ChromaDB instance or API key. The semantic search quality
+Strategy: We test the result serialization logic (Pinecone match -> domain objects)
+without requiring a live Pinecone instance or API key. The semantic search quality
 itself is evaluated separately via the evaluation dataset.
 """
 
@@ -11,17 +11,17 @@ from src.models import TrafficLawArticle, RetrievalResult
 
 
 # ============================================================
-# Result Rehydration (Chroma → Domain Objects)
+# Result Rehydration (Pinecone match -> Domain Objects)
 # ============================================================
 
 class TestResultRehydration:
     """
-    When ChromaDB returns raw dicts, the retriever must reconstruct
+    When Pinecone returns match objects, the retriever must reconstruct
     proper TrafficLawArticle objects. This tests that logic in isolation.
     """
 
     def test_reconstructs_article_from_metadata(self):
-        """Simulates what the retriever does with raw Chroma output."""
+        """Simulates what the retriever does with Pinecone match metadata."""
         meta = {
             "article_id": "LEGIARTI000006841575",
             "num": "R413-17",
@@ -29,7 +29,7 @@ class TestResultRehydration:
             "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006841575",
         }
         content = "Sur les autoroutes, la vitesse est limitée à 130 km/h."
-        distance = 0.35
+        score = 0.92
 
         article = TrafficLawArticle(
             id=meta.get("article_id", "unknown"),
@@ -38,10 +38,10 @@ class TestResultRehydration:
             context=meta.get("category", "Code de la Route"),
             url=meta.get("url"),
         )
-        result = RetrievalResult(article=article, score=distance)
+        result = RetrievalResult(article=article, score=score)
 
         assert result.article.article_number == "R413-17"
-        assert result.score == 0.35
+        assert result.score == 0.92
         assert "legifrance" in result.article.full_url
 
     def test_handles_missing_metadata_keys(self):
@@ -62,7 +62,7 @@ class TestResultRehydration:
 
     def test_preserves_full_content(self):
         """
-        The retriever now uses raw content from metadata, not the blob.
+        The retriever uses raw content from metadata, not the embedding blob.
         This ensures the article text is clean and readable.
         """
         content = "Vitesse limitée à 130 km/h sur autoroute."
@@ -89,7 +89,7 @@ class TestQueryValidation:
     """
 
     def test_short_query_should_be_rejected(self):
-        """Queries under 3 chars are noise — should skip search."""
+        """Queries under 3 chars are noise, should skip search."""
         query = "ab"
         assert len(query.strip()) < 3
 
@@ -125,11 +125,11 @@ class TestResultOrdering:
         ]
 
         results = [
-            RetrievalResult(article=articles[0], score=0.8),
-            RetrievalResult(article=articles[1], score=0.3),
-            RetrievalResult(article=articles[2], score=0.5),
+            RetrievalResult(article=articles[0], score=0.92),
+            RetrievalResult(article=articles[1], score=0.55),
+            RetrievalResult(article=articles[2], score=0.78),
         ]
 
-        sorted_results = sorted(results, key=lambda r: r.score)
-        assert sorted_results[0].score == 0.3
-        assert sorted_results[-1].score == 0.8
+        sorted_results = sorted(results, key=lambda r: r.score, reverse=True)
+        assert sorted_results[0].score == 0.92
+        assert sorted_results[-1].score == 0.55
