@@ -3,7 +3,7 @@
 [![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB)](https://www.python.org/)
 [![Poetry](https://img.shields.io/badge/Dependency-Poetry-blueviolet)](https://python-poetry.org/)
 [![Streamlit](https://img.shields.io/badge/Frontend-Streamlit-FF4B4B)](https://streamlit.io/)
-[![ChromaDB](https://img.shields.io/badge/Vector_DB-Chroma-cc2b5e)](https://www.trychroma.com/)
+[![Pinecone](https://img.shields.io/badge/Vector_DB-Pinecone-1C3C3C)](https://www.pinecone.io/)
 [![Gemini Embedding](https://img.shields.io/badge/Embedding-Gemini_001-512BD4)](https://ai.google.dev/gemini-api/docs/models/gemini#text-embedding)
 [![Gemini](https://img.shields.io/badge/Model-Gemini_2.5_Flash-4285F4)](https://deepmind.google/technologies/gemini/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
@@ -18,8 +18,9 @@ Ask a question in natural language, get back a grounded answer with the exact ar
 # Install dependencies
 poetry install
 
-# Set your API key
-echo "GOOGLE_API_KEY=your-key" > .env
+# Set your API keys
+cp .env.example .env
+# Fill in GOOGLE_API_KEY and PINECONE_API_KEY
 
 # Parse XML articles (if you have the raw LEGI dump)
 poetry run python src/ingestion/parser.py
@@ -55,8 +56,8 @@ The Streamlit app provides a chat interface with streaming responses. Each answe
                                 |
                                 v
                         +-----------------+
-                        | TrafficRetriever|  ChromaDB (L2 distance)
-                        | (embed + search)|  768-dim Gemini embeddings
+                        | TrafficRetriever|  Pinecone (cosine similarity)
+                        | (embed + search)|  3072-dim Gemini embeddings
                         +-------+---------+
                                 |
                           top-k articles
@@ -129,7 +130,7 @@ The classifier uses Gemini's `response_schema` with `response_mime_type="applica
 
 **Full context hierarchy in the embedding blob**: each article is embedded as `"{context_path}\nArticle {number} : {content}"` rather than just the raw content. This lets the embedding model capture the structural position of an article (e.g., "Livre IV > Titre I > Vitesses" disambiguates articles that mention "50 km/h" in different legal contexts). The blob is a computed field (`blob_for_embedding`), precomputed once at ingestion, not at query time.
 
-**Content/blob separation**: the retriever stores raw content separately in Chroma metadata. The embedding blob (context + article + content concatenated) is the indexing input, but `meta.get('content')` is what gets displayed and sent to the generator. This clean separation means the LLM receives well-structured sources (path, content, URL as separate fields) instead of a monolithic blob.
+**Content/blob separation**: the retriever stores raw content separately in Pinecone metadata. The embedding blob (context + article + content concatenated) is the indexing input, but `meta.get('content')` is what gets displayed and sent to the generator. This clean separation means the LLM receives well-structured sources (path, content, URL as separate fields) instead of a monolithic blob.
 
 ### Chunking: one article = one chunk
 
@@ -139,11 +140,11 @@ The current approach embeds each article as a single chunk. Only 9 articles out 
 
 If the system is extended to cover other legal codes (e.g., Code pénal, which the Code de la Route frequently cites), a different chunking strategy will be needed since those codes contain much longer articles.
 
-### ChromaDB with L2 distance + relevance threshold
+### Pinecone with cosine similarity + relevance threshold
 
-ChromaDB was chosen for simplicity: embedded persistence, no external service to run, Python-native.
+Pinecone was chosen after the initial ChromaDB prototype to enable serverless deployment: ChromaDB requires writing to a local filesystem, which is incompatible with ephemeral cloud containers. Pinecone provides a managed vector index accessible over HTTP, with no local state.
 
-A hard relevance threshold (`score < 1.1`) filters out results that are "best available but still bad". This prevents the generator from hallucinating when the knowledge base genuinely doesn't cover a topic.
+Cosine similarity scores range from 0 to 1 (higher = better). A hard relevance threshold (`score > 0.5`) filters out results that are "best available but still bad". This prevents the generator from hallucinating when the knowledge base genuinely doesn't cover a topic.
 
 **Batch processing**: batches of 5 with sleep between batches, tuned for Gemini's free tier rate limits. Exponential backoff (tenacity) handles transient 429s. 400 errors (invalid request, e.g., token overflow) are not retried since they'd fail forever.
 

@@ -45,22 +45,17 @@ class RAGResponse:
 
 class RAG:
 
-    def __init__(self, provider: str = None, db_path: str = None):
-        """
-        Args:
-            provider: "gemini" (default). Extensible for future providers.
-            db_path: Override ChromaDB path.
-        """
+    def __init__(self, provider: str = None):
         if provider:
             settings.PROVIDER = Provider(provider)
 
         self.provider: LLMProvider = get_provider()
         self.classifier = IntentClassifier(self.provider)
-        self.retriever = TrafficRetriever(self.provider, db_path=db_path)
+        self.retriever = TrafficRetriever(self.provider)
         self.generator = TrafficGenerator(self.provider)
 
-    def query(self, question: str, k: int = 3) -> RAGResponse:
-        """Full RAG pipeline: classify → retrieve → generate."""
+    def query(self, question: str, k: int = 5) -> RAGResponse:
+        """Full RAG pipeline: classify -> retrieve -> generate."""
         intent = self.classifier.classify(question)
 
         if intent == Intent.OFF_TOPIC:
@@ -74,7 +69,7 @@ class RAG:
         sources = []
         if intent == Intent.LEGAL_QUERY:
             results = self.retriever.search(question, k=k)
-            sources = [r for r in results if r.score < settings.RELEVANCE_THRESHOLD]
+            sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
 
         response = self.generator.generate(question, sources)
         contexts = [
@@ -90,7 +85,7 @@ class RAG:
             contexts=contexts,
         )
 
-    def stream(self, question: str, k: int = 3) -> Iterator[str]:
+    def stream(self, question: str, k: int = 5) -> Iterator[str]:
         """Streaming variant. Yields response chunks."""
         intent = self.classifier.classify(question)
 
@@ -101,7 +96,7 @@ class RAG:
         sources = []
         if intent == Intent.LEGAL_QUERY:
             results = self.retriever.search(question, k=k)
-            sources = [r for r in results if r.score < settings.RELEVANCE_THRESHOLD]
+            sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
 
         yield from self.generator.generate_stream(question, sources)
 

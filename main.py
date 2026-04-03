@@ -11,11 +11,6 @@ logging.basicConfig(level=logging.ERROR)
 
 
 def main():
-    if not settings.CHROMA_DB_PATH.exists():
-        print(f"❌ Database not found at {settings.CHROMA_DB_PATH}")
-        print("   Run: poetry run python src/ingestion/indexing.py")
-        return
-
     from src.rag import RAG
     rag = RAG()
 

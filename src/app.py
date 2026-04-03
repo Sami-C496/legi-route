@@ -16,13 +16,10 @@ st.caption("Assistant Juridique — Code de la Route Français")
 @st.cache_resource
 def load_rag():
     from src.rag import RAG
-    if not settings.CHROMA_DB_PATH.exists():
-        from src.ingestion.indexing import main as run_indexing
-        run_indexing()
     return RAG()
 
 
-with st.spinner("Chargement de la base juridique..."):
+with st.spinner("Chargement..."):
     rag = load_rag()
 
 if "messages" not in st.session_state:
@@ -52,7 +49,7 @@ if prompt := st.chat_input("Ex: Sanction pour téléphone au volant ?"):
             if intent == Intent.LEGAL_QUERY:
                 with st.spinner("Recherche..."):
                     results = rag.retriever.search(prompt, k=3)
-                    sources = [r for r in results if r.score < settings.RELEVANCE_THRESHOLD]
+                    sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
 
                 if sources:
                     with st.expander(f"📚 {len(sources)} articles consultés"):
