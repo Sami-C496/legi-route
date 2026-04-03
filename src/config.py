@@ -20,6 +20,7 @@ PROVIDER_MODELS = {
 class Settings(BaseSettings):
 
     GOOGLE_API_KEY: str = ""
+    PINECONE_API_KEY: str = ""
     PROVIDER: Provider = Provider.GEMINI
 
     PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
@@ -37,10 +38,6 @@ class Settings(BaseSettings):
         return self.PROJECT_ROOT / "data" / "processed" / "code_route_articles.json"
 
     @property
-    def CHROMA_DB_PATH(self) -> Path:
-        return self.PROJECT_ROOT / "data" / "chroma_db"
-
-    @property
     def CLASSIFIER_MODEL(self) -> str:
         return PROVIDER_MODELS[self.PROVIDER]["classifier"]
 
@@ -52,9 +49,11 @@ class Settings(BaseSettings):
     def EMBEDDING_MODEL(self) -> str:
         return PROVIDER_MODELS[self.PROVIDER]["embedding"]
 
-    @property
-    def COLLECTION_NAME(self) -> str:
-        return "traffic_law_v1"
+    # Pinecone
+    PINECONE_INDEX_NAME: str = "traffic-law-v1"
+    PINECONE_CLOUD: str = "aws"
+    PINECONE_REGION: str = "us-east-1"
+    EMBEDDING_DIMENSION: int = 3072
 
     # Indexing
     BATCH_SIZE: int = 5
@@ -65,7 +64,7 @@ class Settings(BaseSettings):
 
     # Retrieval
     DEFAULT_TOP_K: int = 5
-    RELEVANCE_THRESHOLD: float = 1.1
+    RELEVANCE_THRESHOLD: float = 0.75
 
     # Generation
     GENERATION_TEMPERATURE: float = 0.0

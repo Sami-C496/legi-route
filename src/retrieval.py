@@ -1,6 +1,5 @@
-import os
 import logging
-import chromadb
+from pinecone import Pinecone
 
 from src.config import settings
 from src.models import RetrievalResult, TrafficLawArticle
@@ -11,12 +10,10 @@ logger = logging.getLogger(__name__)
 
 class TrafficRetriever:
 
-    def __init__(self, provider: LLMProvider, db_path: str = None):
+    def __init__(self, provider: LLMProvider):
         self.provider = provider
-        resolved_path = db_path or str(settings.CHROMA_DB_PATH)
-
-        self.chroma_client = chromadb.PersistentClient(path=resolved_path)
-        self.collection = self.chroma_client.get_collection(name=settings.COLLECTION_NAME)
+        pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+        self.index = pc.Index(settings.PINECONE_INDEX_NAME)
 
     def search(self, query: str, k: int = None) -> list[RetrievalResult]:
         k = k or settings.DEFAULT_TOP_K
@@ -32,32 +29,28 @@ class TrafficRetriever:
             return []
 
         try:
-            results = self.collection.query(
-                query_embeddings=[query_vector],
-                n_results=k,
-                include=["documents", "metadatas", "distances"],
+            results = self.index.query(
+                vector=query_vector,
+                top_k=k,
+                include_metadata=True,
             )
         except Exception as e:
-            logger.error(f"ChromaDB query failed: {e}")
+            logger.error(f"Pinecone query failed: {e}")
             return []
 
         clean_results = []
-        if results and results["documents"] and results["documents"][0]:
-            for i in range(len(results["documents"][0])):
-                try:
-                    meta = results["metadatas"][0][i]
-                    distance = results["distances"][0][i] if results["distances"] else 0.0
-                    raw_content = meta.get("content") or results["documents"][0][i]
-
-                    article = TrafficLawArticle(
-                        id=meta.get("article_id", "unknown"),
-                        article_number=meta.get("num", "N/A"),
-                        content=raw_content,
-                        context=meta.get("category", "Code de la Route"),
-                        url=meta.get("url"),
-                    )
-                    clean_results.append(RetrievalResult(article=article, score=distance))
-                except Exception as e:
-                    logger.warning(f"Failed to parse result {i}: {e}")
+        for match in results.matches:
+            try:
+                meta = match.metadata
+                article = TrafficLawArticle(
+                    id=meta.get("article_id", "unknown"),
+                    article_number=meta.get("num", "N/A"),
+                    content=meta.get("content", ""),
+                    context=meta.get("category", "Code de la Route"),
+                    url=meta.get("url"),
+                )
+                clean_results.append(RetrievalResult(article=article, score=match.score))
+            except Exception as e:
+                logger.warning(f"Failed to parse match {match.id}: {e}")
 
         return clean_results
