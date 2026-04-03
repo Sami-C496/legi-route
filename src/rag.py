@@ -54,7 +54,7 @@ class RAG:
         self.retriever = TrafficRetriever(self.provider)
         self.generator = TrafficGenerator(self.provider)
 
-    def query(self, question: str, k: int = 3) -> RAGResponse:
+    def query(self, question: str, k: int = 5) -> RAGResponse:
         """Full RAG pipeline: classify -> retrieve -> generate."""
         intent = self.classifier.classify(question)
 
@@ -85,7 +85,7 @@ class RAG:
             contexts=contexts,
         )
 
-    def stream(self, question: str, k: int = 3) -> Iterator[str]:
+    def stream(self, question: str, k: int = 5) -> Iterator[str]:
         """Streaming variant. Yields response chunks."""
         intent = self.classifier.classify(question)
 

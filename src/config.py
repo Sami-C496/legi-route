@@ -64,7 +64,7 @@ class Settings(BaseSettings):
 
     # Retrieval
     DEFAULT_TOP_K: int = 5
-    RELEVANCE_THRESHOLD: float = 0.75
+    RELEVANCE_THRESHOLD: float = 0.5
 
     # Generation
     GENERATION_TEMPERATURE: float = 0.0

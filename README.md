@@ -144,7 +144,7 @@ If the system is extended to cover other legal codes (e.g., Code pénal, which t
 
 Pinecone was chosen after the initial ChromaDB prototype to enable serverless deployment: ChromaDB requires writing to a local filesystem, which is incompatible with ephemeral cloud containers. Pinecone provides a managed vector index accessible over HTTP, with no local state.
 
-Cosine similarity scores range from 0 to 1 (higher = better). A hard relevance threshold (`score > 0.75`) filters out results that are "best available but still bad". This prevents the generator from hallucinating when the knowledge base genuinely doesn't cover a topic.
+Cosine similarity scores range from 0 to 1 (higher = better). A hard relevance threshold (`score > 0.5`) filters out results that are "best available but still bad". This prevents the generator from hallucinating when the knowledge base genuinely doesn't cover a topic.
 
 **Batch processing**: batches of 5 with sleep between batches, tuned for Gemini's free tier rate limits. Exponential backoff (tenacity) handles transient 429s. 400 errors (invalid request, e.g., token overflow) are not retried since they'd fail forever.
 

@@ -41,7 +41,7 @@ class TestRelevanceFiltering:
 
     def test_boundary_score_excluded(self):
         """Score exactly at threshold should be excluded (strict >)."""
-        scores = [0.75]
+        scores = [0.50]
         assert filter_by_relevance(scores) == []
 
     def test_empty_input(self):
