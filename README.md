@@ -179,9 +179,13 @@ poetry run pytest tests/ -v
 
 73 tests covering classification routing, structured output parsing, fallback behavior, context formatting, model validation, XML parsing, and retrieval logic. All tests run without API calls, mocking or pure computation only.
 
+## Automatic database updates*
+
+A GitHub Actions workflow runs daily at 3 AM UTC. The pipeline authenticates with the [Légifrance PISTE API](https://api.piste.gouv.fr/dila/legifrance/lf-engine-app) via OAuth 2.0 client credentials, fetches the current table of contents for the Code de la Route, then retrieves only the articles not yet in the processed dataset. The Pinecone index is updated accordingly — new articles are embedded and upserted, repealed ones are deleted.
+
 ## Roadmap
 
-- **Automatic database updates**: the DILA dataset is updated regularly. The pipeline will periodically re-download, diff against indexed articles, and re-embed only the changed ones.
+- **Conversational memory**: the pipeline is currently stateless: each question is processed independently. Adding a conversation history window would allow follow-up questions ("et en agglomération ?" after "quelle est la limite sur autoroute ?") without the user having to repeat context.
 
 ---
 
