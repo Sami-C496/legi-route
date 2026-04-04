@@ -88,6 +88,34 @@ def fetch_article(article_id: str, token: str) -> Optional[TrafficLawArticle]:
         return None
 
 
+def _write_update_log(
+    date_str: str,
+    total: int,
+    new_articles: list[dict],
+    removed_articles: list[dict],
+) -> None:
+    lines = [
+        "# Dernière mise à jour",
+        "",
+        f"**Date :** {date_str}",
+        "",
+        f"**Total :** {total} articles en vigueur  ",
+        f"**Ajoutés :** {len(new_articles)}  ",
+        f"**Retirés :** {len(removed_articles)}",
+    ]
+    if new_articles:
+        lines += ["", "## Articles ajoutés"]
+        for a in new_articles:
+            lines.append(f"- **{a.get('article_number') or '—'}** — {a.get('context', '')}")
+    if removed_articles:
+        lines += ["", "## Articles retirés"]
+        for a in removed_articles:
+            lines.append(f"- **{a.get('article_number') or '—'}** — {a.get('context', '')}")
+    md_path = settings.PROJECT_ROOT / "latest_update.md"
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+
+
 def main():
     token = get_token()
 
@@ -102,14 +130,18 @@ def main():
 
     vigueur_set = set(vigueur_ids)
     new_ids = [aid for aid in vigueur_ids if aid not in existing]
-    logger.info(f"{len(existing)} existing, {len(new_ids)} to fetch.")
+    removed_ids = [aid for aid in existing if aid not in vigueur_set]
+    logger.info(f"{len(existing)} existing, {len(new_ids)} to fetch, {len(removed_ids)} removed.")
 
     articles = {aid: data for aid, data in existing.items() if aid in vigueur_set}
 
+    newly_fetched: list[dict] = []
     for i, article_id in enumerate(new_ids):
         article = fetch_article(article_id, token)
         if article:
-            articles[article_id] = article.model_dump()
+            data = article.model_dump(exclude={"blob_for_embedding", "full_url"})
+            articles[article_id] = data
+            newly_fetched.append(data)
         if (i + 1) % 50 == 0:
             logger.info(f"  {i + 1}/{len(new_ids)} fetched")
         time.sleep(0.2)
@@ -118,6 +150,9 @@ def main():
     settings.PROCESSED_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(settings.PROCESSED_FILE, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
+
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    _write_update_log(date_str, len(output), newly_fetched, [existing[aid] for aid in removed_ids])
 
     logger.info(f"Done. {len(output)} articles written to {settings.PROCESSED_FILE}")
 

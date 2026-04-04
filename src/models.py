@@ -1,5 +1,4 @@
-from pydantic import BaseModel, Field, field_validator, computed_field
-from typing import Optional
+from pydantic import BaseModel, field_validator, computed_field
 
 
 class TrafficLawArticle(BaseModel):
@@ -7,7 +6,6 @@ class TrafficLawArticle(BaseModel):
     article_number: str
     content: str
     context: str
-    url: Optional[str] = None
 
     @field_validator("content")
     @classmethod
