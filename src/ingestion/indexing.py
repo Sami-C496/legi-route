@@ -73,16 +73,22 @@ def main():
     articles = load_validated_data()
     logger.info(f"Loaded {len(articles)} articles.")
 
-    # Check which IDs already exist
-    all_ids = [a.id for a in articles]
-    existing_ids = set()
-    for i in range(0, len(all_ids), 100):
-        batch_ids = all_ids[i:i + 100]
-        fetch_result = index.fetch(ids=batch_ids)
-        existing_ids.update(fetch_result.vectors.keys())
+    current_ids = {a.id for a in articles}
 
-    new_articles = [a for a in articles if a.id not in existing_ids]
-    logger.info(f"{len(existing_ids)} already indexed, {len(new_articles)} new articles to index.")
+    logger.info("Fetching existing IDs from Pinecone...")
+    pinecone_ids = set()
+    for ids_batch in index.list():
+        pinecone_ids.update(ids_batch)
+
+    new_articles = [a for a in articles if a.id not in pinecone_ids]
+    deleted_ids = list(pinecone_ids - current_ids)
+
+    logger.info(f"{len(new_articles)} new, {len(deleted_ids)} to delete.")
+
+    if deleted_ids:
+        for i in range(0, len(deleted_ids), 1000):
+            index.delete(ids=deleted_ids[i : i + 1000])
+        logger.info(f"Deleted {len(deleted_ids)} articles.")
 
     if not new_articles:
         stats = index.describe_index_stats()
