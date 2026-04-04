@@ -21,6 +21,8 @@ class Settings(BaseSettings):
 
     GOOGLE_API_KEY: str = ""
     PINECONE_API_KEY: str = ""
+    LEGIFRANCE_CLIENT_ID: str = ""
+    LEGIFRANCE_CLIENT_SECRET: str = ""
     PROVIDER: Provider = Provider.GEMINI
 
     PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent

@@ -47,7 +47,6 @@ class TrafficRetriever:
                     article_number=meta.get("num", "N/A"),
                     content=meta.get("content", ""),
                     context=meta.get("category", "Code de la Route"),
-                    url=meta.get("url"),
                 )
                 clean_results.append(RetrievalResult(article=article, score=match.score))
             except Exception as e:
