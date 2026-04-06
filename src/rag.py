@@ -24,7 +24,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Iterator
 
-from src.config import settings, Provider
+from src.config import settings, Provider, HISTORY_WINDOW
 from src.providers import get_provider, LLMProvider
 from src.classifier import IntentClassifier, Intent
 from src.retrieval import TrafficRetriever
@@ -33,7 +33,10 @@ from src.models import RetrievalResult
 
 logger = logging.getLogger(__name__)
 
-_HISTORY_WINDOW = 3
+_OFF_TOPIC_RESPONSE = (
+    "Je suis spécialisé dans le Code de la Route français. "
+    "Je ne peux pas répondre à cette question."
+)
 
 _REWRITE_PROMPT = """Tu reformules des questions pour un moteur de recherche juridique.
 Si la question fait référence à la conversation précédente (pronoms, "et", "mais", "ça", "il", "elle", références implicites à un sujet précédent), reformule-la en question complète et autonome.
@@ -53,10 +56,8 @@ class RAGResponse:
 class RAG:
 
     def __init__(self, provider: str = None):
-        if provider:
-            settings.PROVIDER = Provider(provider)
-
-        self.provider: LLMProvider = get_provider()
+        prov = Provider(provider) if provider else settings.PROVIDER
+        self.provider: LLMProvider = get_provider(prov)
         self.classifier = IntentClassifier(self.provider)
         self.retriever = TrafficRetriever(self.provider)
         self.generator = TrafficGenerator(self.provider)
@@ -66,30 +67,28 @@ class RAG:
         if not history:
             return question
         turns = []
-        for msg in history[-_HISTORY_WINDOW:]:
+        for msg in history[-HISTORY_WINDOW:]:
             role = "Utilisateur" if msg["role"] == "user" else "LégiRoute"
             turns.append(f"{role} : {msg['content']}")
         prompt = "Historique :\n" + "\n".join(turns) + f"\n\nQuestion : {question}"
         return "".join(self.provider.generate_stream(prompt, _REWRITE_PROMPT, temperature=0.0)).strip()
+
+    def _retrieve(self, question: str, intent: Intent, k: int, history: list[dict] | None) -> list[RetrievalResult]:
+        """Shared retrieval logic: rewrite -> search -> filter."""
+        if intent != Intent.LEGAL_QUERY:
+            return []
+        search_query = self.rewrite_query(question, history or [])
+        results = self.retriever.search(search_query, k=k)
+        return [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
 
     def query(self, question: str, k: int = 5, history: list[dict] | None = None) -> RAGResponse:
         """Full RAG pipeline: classify -> retrieve -> generate."""
         intent = self.classifier.classify(question)
 
         if intent == Intent.OFF_TOPIC:
-            return RAGResponse(
-                query=question,
-                intent=intent,
-                response="Je suis spécialisé dans le Code de la Route français. "
-                         "Je ne peux pas répondre à cette question.",
-            )
+            return RAGResponse(query=question, intent=intent, response=_OFF_TOPIC_RESPONSE)
 
-        sources = []
-        if intent == Intent.LEGAL_QUERY:
-            search_query = self.rewrite_query(question, history or [])
-            results = self.retriever.search(search_query, k=k)
-            sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
-
+        sources = self._retrieve(question, intent, k, history)
         response = self.generator.generate(question, sources, history=history)
         contexts = [
             f"Article {r.article.article_number} : {r.article.content}"
@@ -109,15 +108,10 @@ class RAG:
         intent = self.classifier.classify(question)
 
         if intent == Intent.OFF_TOPIC:
-            yield "Je suis spécialisé dans le Code de la Route français."
+            yield _OFF_TOPIC_RESPONSE
             return
 
-        sources = []
-        if intent == Intent.LEGAL_QUERY:
-            search_query = self.rewrite_query(question, history or [])
-            results = self.retriever.search(search_query, k=k)
-            sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
-
+        sources = self._retrieve(question, intent, k, history)
         yield from self.generator.generate_stream(question, sources, history=history)
 
     def batch(self, questions: list[str], k: int = 3) -> list[RAGResponse]:
