@@ -199,4 +199,24 @@ make eval
 
 ---
 
+## Roadmap
+
+**Evaluation**
+- Build an annotated ground truth dataset to unlock the remaining RAGAS metrics (Answer Relevance, Answer Correctness). The current eval dataset has questions but no reference answers, which limits what can be measured without a judge model
+- Swap the LLM judge for a different model than the generator to eliminate self-bias in the RAGAS scores (current setup uses Gemini for both)
+
+**Multi-provider support**
+- Add a second `LLMProvider` implementation (Mistral, OpenAI, or Anthropic). The ABC is already in place, each provider only needs three methods: `embed`, `generate_stream`, `classify_intent`
+- Benchmark retrieval quality and answer faithfulness across providers on the same eval dataset
+
+**Retrieval**
+- Cross-code indexing: the Code de la Route frequently references Code pénal and Code des assurances. Index those codes as a separate namespace and retrieve across namespaces when the query references penalties or insurance
+- Re-ranking: add a cross-encoder pass after Pinecone retrieval to reorder the top-k results before generation. Especially useful for multi-article questions where the dense retriever returns partially relevant results
+
+**Data**
+- HTML tag stripping in the ingestion pipeline. A small number of articles contain inline HTML that is currently passed raw to the LLM
+- Structured metadata filtering: allow pre-filtering by legal book or title before vector search (e.g., "only search in Livre IV" for speed-related queries)
+
+---
+
 **Author**: Sami Contesenne - [sami.contesenne496@gmail.com](mailto:sami.contesenne496@gmail.com)
