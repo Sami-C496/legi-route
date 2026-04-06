@@ -49,10 +49,18 @@ The Streamlit app provides a chat interface with streaming responses. Each answe
 ```
                         +-----------------+
           user query -->| IntentClassifier|---> OFF_TOPIC: polite refusal
-                        | (Gemini Flash)  |---> CHITCHAT: direct response
+       + history        | (Gemini Flash)  |---> CHITCHAT: direct response
                         +-------+---------+
                                 |
                            LEGAL_QUERY
+                                |
+                                v
+                        +-----------------+
+                        |  QueryRewriter  |  rewrites follow-ups into
+                        | (Gemini Flash)  |  standalone search queries
+                        +-------+---------+
+                                |
+                         rewritten query
                                 |
                                 v
                         +-----------------+
@@ -67,6 +75,7 @@ The Streamlit app provides a chat interface with streaming responses. Each answe
                         +-----------------+
                         | TrafficGenerator|  Gemini Flash (streaming)
                         | (prompt + cite) |  grounded on retrieved articles
+                        |                 |  + conversation history (3 turns)
                         +-----------------+
                                 |
                                 v
@@ -74,6 +83,8 @@ The Streamlit app provides a chat interface with streaming responses. Each answe
 ```
 
 Pipeline modules are decoupled via an `LLMProvider` interface: the classifier, retriever, and generator each receive a provider instance at construction time. Swapping to another LLM backend means implementing three methods: `embed`, `generate_stream`, `classify_intent`.
+
+Conversation history (last 3 messages) is maintained per session. Follow-up questions ("et en agglomération ?") are rewritten into standalone queries before hitting Pinecone, so retrieval is always grounded on a complete question. The original question and full history are then passed to the generator.
 
 ## Data Source
 
@@ -112,7 +123,7 @@ The first implementation used a keyword + length heuristic (`len < 30` + keyword
 The current approach uses a lightweight LLM classifier (Gemini Flash Lite, ~50 tokens) that routes each query before hitting the vector DB. This avoids wasting embedding calls on greetings or off-topic questions, and lets the system respond naturally to chitchat without fabricating legal citations.
 
 Three intents:
-- `LEGAL_QUERY` -> full RAG pipeline (embed -> search -> generate)
+- `LEGAL_QUERY` -> query rewriting -> full RAG pipeline (embed -> search -> generate with history)
 - `CHITCHAT` -> direct LLM response (no retrieval)
 - `OFF_TOPIC` -> polite refusal
 
@@ -182,10 +193,6 @@ poetry run pytest tests/ -v
 ## Automatic database updates*
 
 A GitHub Actions workflow runs daily at 3 AM UTC. The pipeline authenticates with the [Légifrance PISTE API](https://api.piste.gouv.fr/dila/legifrance/lf-engine-app) via OAuth 2.0 client credentials, fetches the current table of contents for the Code de la Route, then retrieves only the articles not yet in the processed dataset. The Pinecone index is updated accordingly — new articles are embedded and upserted, repealed ones are deleted.
-
-## Roadmap
-
-- **Conversational memory**: the pipeline is currently stateless: each question is processed independently. Adding a conversation history window would allow follow-up questions ("et en agglomération ?" after "quelle est la limite sur autoroute ?") without the user having to repeat context.
 
 ---
 
