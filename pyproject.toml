@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "legi-route"
-version = "0.1.0"
+version = "1.0.0"
 description = "RAG system for French Traffic Law (Code de la Route)"
 authors = ["Sami Contesenne <sami.contesenne496@gmail.com>"]
 readme = "README.md"
