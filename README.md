@@ -160,10 +160,10 @@ Max tokens was raised from 1000 to 2048 after seeing truncated responses on comp
 ## Tests
 
 ```bash
-poetry run pytest tests/ -v
+make test
 ```
 
-73 tests covering classification routing, structured output parsing, fallback behavior, context formatting, model validation, XML parsing, and retrieval logic. All tests run without live API calls, mock or pure computation only.
+72 tests covering classification routing, structured output parsing, fallback behavior, context formatting, model validation, XML parsing, and retrieval logic. All tests run without live API calls, mock or pure computation only.
 
 ## Automatic database updates
 
@@ -175,26 +175,26 @@ A `latest_update.md` file is committed daily with the list of added and removed 
 
 ```bash
 # Install dependencies
-poetry install
+make install
 
 # Set your API keys
 cp .env.example .env
 # Fill in GOOGLE_API_KEY, PINECONE_API_KEY, LEGIFRANCE_CLIENT_ID, LEGIFRANCE_CLIENT_SECRET
 
 # Update articles from Légifrance API (or use the committed JSON directly)
-poetry run python src/ingestion/download.py
+make download
 
 # Build the vector index
-poetry run python src/ingestion/indexing.py
+make index
 
 # Run Streamlit app
-poetry run streamlit run src/app.py
+make run
 
 # Run CLI
-poetry run python main.py
+make cli
 
 # Run evaluation
-poetry run python eval/eval_ragas.py
+make eval
 ```
 
 ---
