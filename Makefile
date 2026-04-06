@@ -1,4 +1,6 @@
-.PHONY: install test run cli download index eval lint
+.PHONY: install test run cli download index eval lint release
+
+VERSION := $(shell python -c "exec(open('src/version.py').read()); print(__version__)")
 
 install:
 	poetry install
@@ -23,3 +25,10 @@ eval:
 
 lint:
 	poetry run black src/ tests/
+
+release:
+	@echo "Tagging v$(VERSION)..."
+	git tag -a v$(VERSION) -m "v$(VERSION)"
+	git push origin v$(VERSION)
+	gh release create v$(VERSION) --title "v$(VERSION)" --notes-file CHANGELOG.md
+	@echo "Release v$(VERSION) published."
