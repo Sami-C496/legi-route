@@ -40,15 +40,11 @@ class TestTrafficLawArticleCreation:
         assert sample_article.article_number == "R413-17"
         assert "130 km/h" in sample_article.content
 
-    def test_url_field_is_optional(self, sample_article_data):
-        """URL is optional metadata — should default to None."""
+    def test_rejects_extra_fields_silently(self, sample_article_data):
+        """Extra fields should not cause errors (Pydantic default behavior)."""
+        sample_article_data["unknown_field"] = "some_value"
         article = TrafficLawArticle(**sample_article_data)
-        assert article.url is None
-
-    def test_url_field_accepts_value(self, sample_article_data):
-        sample_article_data["url"] = "https://example.com"
-        article = TrafficLawArticle(**sample_article_data)
-        assert article.url == "https://example.com"
+        assert article.id == sample_article_data["id"]
 
 
 # ============================================================

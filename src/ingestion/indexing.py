@@ -7,13 +7,11 @@ from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_l
 
 from src.config import settings
 from src.models import TrafficLawArticle
-from src.providers import get_provider
+from src.providers import get_provider, LLMProvider
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
-
-provider = get_provider()
 
 
 def _is_retriable(exc):
@@ -30,7 +28,7 @@ def _is_retriable(exc):
     retry=retry_if_exception(_is_retriable),
     before_sleep=before_sleep_log(logger, logging.WARNING),
 )
-def compute_embeddings(texts: list[str]) -> list[list[float]]:
+def compute_embeddings(provider: LLMProvider, texts: list[str]) -> list[list[float]]:
     return provider.embed(texts, task_type="document")
 
 
@@ -67,6 +65,7 @@ def get_or_create_index(pc: Pinecone) -> object:
 def main():
     logger.info("Starting indexing pipeline...")
 
+    provider = get_provider()
     pc = Pinecone(api_key=settings.PINECONE_API_KEY)
     index = get_or_create_index(pc)
 
@@ -100,7 +99,7 @@ def main():
     for i in tqdm(range(0, len(new_articles), settings.BATCH_SIZE), desc="Indexing"):
         batch = new_articles[i : i + settings.BATCH_SIZE]
 
-        embeddings = compute_embeddings([a.blob_for_embedding for a in batch])
+        embeddings = compute_embeddings(provider, [a.blob_for_embedding for a in batch])
 
         vectors = [
             (

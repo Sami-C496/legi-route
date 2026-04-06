@@ -36,7 +36,7 @@ if prompt := st.chat_input("Ex: Sanction pour téléphone au volant ?"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    history = st.session_state.messages[:-1]
+    history = st.session_state.messages[1:-1]
 
     with st.chat_message("assistant"):
         placeholder = st.empty()
@@ -58,7 +58,8 @@ if prompt := st.chat_input("Ex: Sanction pour téléphone au volant ?"):
                     with st.expander(f"📚 {len(sources)} articles consultés"):
                         for r in sources:
                             st.markdown(f"[**{r.article.article_number}**]({r.article.full_url})")
-                            st.caption(r.article.content[:250] + "...")
+                            text = r.article.content
+                            st.caption(text[:250] + "..." if len(text) > 250 else text)
                             st.divider()
 
             for chunk in rag.generator.generate_stream(prompt, sources, history=history):

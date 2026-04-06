@@ -1,6 +1,5 @@
 """
 Provider abstraction for LLM and embedding APIs.
-Supports Gemini and Mistral with a unified interface.
 """
 
 import json

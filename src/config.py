@@ -80,3 +80,5 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+HISTORY_WINDOW = 3

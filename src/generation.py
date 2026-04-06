@@ -1,7 +1,7 @@
 import logging
 from typing import Iterator
 
-from src.config import settings
+from src.config import HISTORY_WINDOW
 from src.models import RetrievalResult
 from src.providers import LLMProvider
 
@@ -40,7 +40,7 @@ class TrafficGenerator:
 
     def _format_history(self, history: list[dict]) -> str:
         turns = []
-        for msg in history[-3:]:
+        for msg in history[-HISTORY_WINDOW:]:
             role = "Utilisateur" if msg["role"] == "user" else "LégiRoute"
             turns.append(f"{role} : {msg['content']}")
         return "HISTORIQUE :\n" + "\n".join(turns) + "\n\n"
