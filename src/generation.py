@@ -38,11 +38,18 @@ class TrafficGenerator:
             )
         return "\n".join(parts)
 
-    def generate_stream(self, query: str, results: list[RetrievalResult]) -> Iterator[str]:
+    def _format_history(self, history: list[dict]) -> str:
+        turns = []
+        for msg in history[-3:]:
+            role = "Utilisateur" if msg["role"] == "user" else "LégiRoute"
+            turns.append(f"{role} : {msg['content']}")
+        return "HISTORIQUE :\n" + "\n".join(turns) + "\n\n"
+
+    def generate_stream(self, query: str, results: list[RetrievalResult], history: list[dict] | None = None) -> Iterator[str]:
+        history_block = self._format_history(history) if history else ""
         context = self._format_context(results)
-        prompt = f"CONTEXTE JURIDIQUE :\n{context}\n\nQUESTION :\n{query}\n\nRÉPONSE :"
+        prompt = f"{history_block}CONTEXTE JURIDIQUE :\n{context}\n\nQUESTION :\n{query}\n\nRÉPONSE :"
         yield from self.provider.generate_stream(prompt, SYSTEM_PROMPT)
 
-    def generate(self, query: str, results: list[RetrievalResult]) -> str:
-        """Non-streaming generation. Collects all chunks into a single string."""
-        return "".join(self.generate_stream(query, results))
+    def generate(self, query: str, results: list[RetrievalResult], history: list[dict] | None = None) -> str:
+        return "".join(self.generate_stream(query, results, history))

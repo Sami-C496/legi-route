@@ -33,6 +33,13 @@ from src.models import RetrievalResult
 
 logger = logging.getLogger(__name__)
 
+_HISTORY_WINDOW = 3
+
+_REWRITE_PROMPT = """Tu reformules des questions pour un moteur de recherche juridique.
+Si la question fait référence à la conversation précédente (pronoms, "et", "mais", "ça", "il", "elle", références implicites à un sujet précédent), reformule-la en question complète et autonome.
+Si la question est déjà autonome et complète, retourne-la EXACTEMENT telle quelle, sans aucune modification.
+Réponds UNIQUEMENT avec la question. Aucune explication."""
+
 
 @dataclass
 class RAGResponse:
@@ -54,7 +61,18 @@ class RAG:
         self.retriever = TrafficRetriever(self.provider)
         self.generator = TrafficGenerator(self.provider)
 
-    def query(self, question: str, k: int = 5) -> RAGResponse:
+    def rewrite_query(self, question: str, history: list[dict]) -> str:
+        """Reformulate a follow-up question into a standalone search query."""
+        if not history:
+            return question
+        turns = []
+        for msg in history[-_HISTORY_WINDOW:]:
+            role = "Utilisateur" if msg["role"] == "user" else "LégiRoute"
+            turns.append(f"{role} : {msg['content']}")
+        prompt = "Historique :\n" + "\n".join(turns) + f"\n\nQuestion : {question}"
+        return "".join(self.provider.generate_stream(prompt, _REWRITE_PROMPT, temperature=0.0)).strip()
+
+    def query(self, question: str, k: int = 5, history: list[dict] | None = None) -> RAGResponse:
         """Full RAG pipeline: classify -> retrieve -> generate."""
         intent = self.classifier.classify(question)
 
@@ -68,10 +86,11 @@ class RAG:
 
         sources = []
         if intent == Intent.LEGAL_QUERY:
-            results = self.retriever.search(question, k=k)
+            search_query = self.rewrite_query(question, history or [])
+            results = self.retriever.search(search_query, k=k)
             sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
 
-        response = self.generator.generate(question, sources)
+        response = self.generator.generate(question, sources, history=history)
         contexts = [
             f"Article {r.article.article_number} : {r.article.content}"
             for r in sources
@@ -85,7 +104,7 @@ class RAG:
             contexts=contexts,
         )
 
-    def stream(self, question: str, k: int = 5) -> Iterator[str]:
+    def stream(self, question: str, k: int = 5, history: list[dict] | None = None) -> Iterator[str]:
         """Streaming variant. Yields response chunks."""
         intent = self.classifier.classify(question)
 
@@ -95,10 +114,11 @@ class RAG:
 
         sources = []
         if intent == Intent.LEGAL_QUERY:
-            results = self.retriever.search(question, k=k)
+            search_query = self.rewrite_query(question, history or [])
+            results = self.retriever.search(search_query, k=k)
             sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
 
-        yield from self.generator.generate_stream(question, sources)
+        yield from self.generator.generate_stream(question, sources, history=history)
 
     def batch(self, questions: list[str], k: int = 3) -> list[RAGResponse]:
         """Run multiple queries. Useful for evaluation."""

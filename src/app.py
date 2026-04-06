@@ -36,6 +36,8 @@ if prompt := st.chat_input("Ex: Sanction pour téléphone au volant ?"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    history = st.session_state.messages[:-1]
+
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
@@ -48,7 +50,8 @@ if prompt := st.chat_input("Ex: Sanction pour téléphone au volant ?"):
             sources = []
             if intent == Intent.LEGAL_QUERY:
                 with st.spinner("Recherche..."):
-                    results = rag.retriever.search(prompt, k=3)
+                    search_query = rag.rewrite_query(prompt, history)
+                    results = rag.retriever.search(search_query, k=3)
                     sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
 
                 if sources:
@@ -58,7 +61,7 @@ if prompt := st.chat_input("Ex: Sanction pour téléphone au volant ?"):
                             st.caption(r.article.content[:250] + "...")
                             st.divider()
 
-            for chunk in rag.generator.generate_stream(prompt, sources):
+            for chunk in rag.generator.generate_stream(prompt, sources, history=history):
                 full_response += chunk
                 placeholder.markdown(full_response + "▌")
 
