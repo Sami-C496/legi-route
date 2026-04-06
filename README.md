@@ -8,41 +8,30 @@
 [![Gemini](https://img.shields.io/badge/Model-Gemini_2.5_Flash-4285F4)](https://deepmind.google/technologies/gemini/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-RAG system that answers questions about the French Highway Code (*Code de la Route*) with cited legal articles from Légifrance.
+RAG system over the French Highway Code (*Code de la Route*). Ask a question in natural language, the pipeline retrieves the relevant legal articles from Légifrance and generates a cited, grounded answer.
 
-Ask a question in natural language, get back a grounded answer with the exact articles and links to the official source.
+> **Live demo**: [legiroute.onrender.com](https://legiroute.onrender.com)
 
-## Setup
+- Answers grounded strictly on retrieved articles, each cited by number with a direct link to the official Légifrance source
+- Only articles currently in force (`ETAT=VIGUEUR`) are indexed. Citing a repealed law is a critical failure, not an edge case
+- Conversational: follow-up questions ("et en agglomération ?") are rewritten into standalone queries before retrieval, so context carries through without polluting the vector search
+- Intent routing classifies every query before hitting the vector DB. Chitchat gets a direct response, off-topic is refused, only legal queries trigger retrieval
+- Database updated daily via the Légifrance PISTE API (OAuth 2.0), new articles are upserted and repealed ones deleted automatically
 
-```bash
-# Install dependencies
-poetry install
+## Results
 
-# Set your API keys
-cp .env.example .env
-# Fill in GOOGLE_API_KEY and PINECONE_API_KEY
+Evaluated on a **61-question dataset** across 18 categories, scored by an LLM judge (Gemini).
 
-# Parse XML articles (if you have the raw LEGI dump)
-poetry run python src/ingestion/parser.py
+| Metric | Score | What it measures |
+|--------|-------|-----------------|
+| **Faithfulness** | **0.935** | Answer does not go beyond the retrieved sources |
+| **Context Precision** | **0.940** | Retrieved articles are relevant to the question |
 
-# Build the vector index
-poetry run python src/ingestion/indexing.py
+These two metrics isolate where failures come from:
+- High Context Precision + low Faithfulness: retrieval works, the LLM is hallucinating, fix the prompt
+- Low Context Precision + high Faithfulness: wrong articles retrieved, the LLM is faithful to them, fix the retriever
 
-# Run Streamlit app
-poetry run streamlit run src/app.py
-
-# Run CLI
-poetry run python main.py
-
-# Run evaluation
-poetry run python eval/eval_ragas.py
-```
-
-## Usage
-
-![LégiRoute demo](docs/demo.png)
-
-The Streamlit app provides a chat interface with streaming responses. Each answer cites the relevant articles, displayed in an expandable panel with direct links to Légifrance.
+Other RAGAS metrics (Answer Relevance, Answer Correctness) were not included because they require annotated ground truth answers, which are not available for this dataset. Faithfulness and Context Precision only need the retrieved context, so they work without reference answers.
 
 ## Architecture
 
@@ -88,99 +77,85 @@ Conversation history (last 3 messages) is maintained per session. Follow-up ques
 
 ## Data Source
 
-Articles are parsed from the [DILA LEGI XML dataset](https://www.data.gouv.fr/fr/datasets/legi-codes-lois-et-reglements-consolides/) (open data), not a web scraper or PDF extractor. The XML format provides structured metadata (hierarchy, status, dates) that would be lost with scraping.
+Articles are sourced from the [DILA LEGI XML dataset](https://www.data.gouv.fr/fr/datasets/legi-codes-lois-et-reglements-consolides/) (official open data), not scraped from a website or extracted from a PDF. The XML format gives structured metadata (hierarchy, article status, dates) that scraping would lose.
 
-**1161 articles** indexed, covering speed limits, alcohol, equipment, penalties, signage, EDPM, etc.
+**1163 articles** indexed, covering speed limits, alcohol limits, equipment, penalties, signage, EDPM regulations, and more.
 
-Only articles with `ETAT=VIGUEUR` (currently in force) are retained. A legal assistant returning a repealed law is a critical failure, so no soft filtering: binary keep/discard.
+Only articles with `ETAT=VIGUEUR` are indexed. The filter is binary: if an article is not currently in force, it does not go in.
 
-The Code de la Route frequently cites external codes (Code pénal, Code des assurances). For now, we ingest only the text representation of these citations. This lets the LLM see and quote the reference without requiring us to cross-index all 73 French legal codes.
+The Code de la Route frequently references external codes (Code pénal, Code des assurances). We don't cross-index those, only the citation text is kept. The LLM can still see and quote the reference without us having to ingest all 73 French legal codes.
 
-## Evaluation (RAGAS)
-
-Evaluated on a **61-question dataset** across 18 categories, scored by an LLM judge (Gemini).
-
-| Metric | Score |
-|--------|-------|
-| **Faithfulness** | **0.935** |
-| **Context Precision** | **0.940** |
-
-- **Faithfulness**: does the answer only use information from the retrieved context? (no hallucination)
-- **Context Precision**: are the retrieved articles actually relevant to the question?
-
-These two metrics isolate whether the problem is retrieval or generation:
-- High Context Precision + low Faithfulness = retriever works but the LLM hallucinates -> fix the prompt
-- Low Context Precision + high Faithfulness = wrong articles but faithful to them -> fix the retriever
-
-Evaluation script: `eval/eval_ragas.py`. RAG results are cached to disk (`rag_cache.json`) so that if RAGAS scoring crashes (rate limits, dependency issues), the 61 API calls aren't wasted. `--no-cache` forces a fresh run.
+The database is kept current by a GitHub Actions workflow running daily at 3 AM UTC (see [Automatic database updates](#automatic-database-updates)).
 
 ## Architecture Decisions
 
 ### Intent classification before retrieval
 
-The first implementation used a keyword + length heuristic (`len < 30` + keyword list). The false positive rate was too high: "Peut-on klaxonner ?" (legal question, 19 chars) was misclassified as chitchat.
+The first implementation used a keyword + length heuristic (`len < 30` + keyword list). False positive rate was too high: "Peut-on klaxonner ?" (a legal question, 19 chars) kept getting classified as chitchat.
 
-The current approach uses a lightweight LLM classifier (Gemini Flash Lite, ~50 tokens) that routes each query before hitting the vector DB. This avoids wasting embedding calls on greetings or off-topic questions, and lets the system respond naturally to chitchat without fabricating legal citations.
+The current approach uses a lightweight LLM classifier (Gemini Flash Lite, ~50 tokens) that routes each query before touching the vector DB. This avoids wasting embedding calls on greetings or off-topic questions, and the system can respond naturally to chitchat without fabricating legal citations.
 
 Three intents:
 - `LEGAL_QUERY` -> query rewriting -> full RAG pipeline (embed -> search -> generate with history)
 - `CHITCHAT` -> direct LLM response (no retrieval)
 - `OFF_TOPIC` -> polite refusal
 
-**Safety default**: any classification failure defaults to `LEGAL_QUERY`. Better to run unnecessary retrieval than to block a real question.
+**Safety default**: any classification failure falls back to `LEGAL_QUERY`. Better to run unnecessary retrieval than to block a real question.
 
-**Trade-off**: adds one LLM call per query (~100ms). Worth it because looking up and citing legal articles for a "Bonjour" makes no sense and would degrade answer quality.
+**Trade-off**: adds one LLM call per query (~100ms). Worth it. Embedding a greeting and returning fabricated legal citations is worse on both latency and quality.
 
 ### Structured output for classification
 
-The classifier uses Gemini's `response_schema` with `response_mime_type="application/json"` to force a valid JSON enum (`LEGAL_QUERY | CHITCHAT | OFF_TOPIC`). No regex parsing, no retry loops. A dedicated test verifies the Python `Intent` enum and the JSON schema enum stay in sync.
+The classifier uses Gemini's `response_schema` with `response_mime_type="application/json"` to force a valid JSON enum (`LEGAL_QUERY | CHITCHAT | OFF_TOPIC`). No regex parsing, no retry logic. A dedicated test verifies the Python `Intent` enum and the JSON schema enum stay in sync.
+
+### Conversational query rewriting
+
+Follow-up questions ("et en agglomération ?", "quelle est la sanction ?") lose their meaning without context. Injecting conversation history directly into the retrieval query pollutes the embedding space with irrelevant turns.
+
+Instead, a dedicated rewriting step runs before retrieval: the LLM receives the conversation history and either rewrites the question into a self-contained query, or returns it unchanged if it already is. The rewriter runs at `temperature=0` and is explicitly instructed not to touch standalone questions. If the current turn has nothing to do with previous ones, retrieval proceeds on the original question with no modification.
 
 ### Embedding strategy
 
-**Asymmetric embeddings**: Gemini's embedding API supports task types natively, `RETRIEVAL_DOCUMENT` for articles, `RETRIEVAL_QUERY` for questions. This optimizes the vector space differently for each role, improving recall when short questions ("vitesse autoroute ?") need to match long legal articles.
+**Asymmetric embeddings**: Gemini's embedding API supports `RETRIEVAL_DOCUMENT` and `RETRIEVAL_QUERY` task types natively. Using the right task type for each role improves recall when short questions ("vitesse autoroute ?") need to match long legal articles.
 
-**Full context hierarchy in the embedding blob**: each article is embedded as `"{context_path}\nArticle {number} : {content}"` rather than just the raw content. This lets the embedding model capture the structural position of an article (e.g., "Livre IV > Titre I > Vitesses" disambiguates articles that mention "50 km/h" in different legal contexts). The blob is a computed field (`blob_for_embedding`), precomputed once at ingestion, not at query time.
+**Full context hierarchy in the embedding blob**: each article is embedded as `"{context_path}\nArticle {number} : {content}"` rather than raw content alone. This lets the embedding capture where the article sits in the legal hierarchy. "Livre IV > Titre I > Vitesses" disambiguates articles that all mention "50 km/h" but in different legal contexts.
 
-**Content/blob separation**: the retriever stores raw content separately in Pinecone metadata. The embedding blob (context + article + content concatenated) is the indexing input, but `meta.get('content')` is what gets displayed and sent to the generator. This clean separation means the LLM receives well-structured sources (path, content, URL as separate fields) instead of a monolithic blob.
+**Content/blob separation**: the index stores raw content separately from the embedding input. The LLM receives clean, structured sources (article number, hierarchy path, content, Légifrance URL as distinct fields) rather than a monolithic blob.
 
 ### Chunking: one article = one chunk
 
-Most articles in the Code de la Route are short: median length is 103 words, and 95% of articles are under 500 words. Splitting them further would break the legal atomicity of each article and make citation harder (the LLM needs to cite "R413-17", not "R413-17 chunk 2 of 4").
+Median article length in the Code de la Route is 103 words; 95% of articles are under 500 words. Sub-article chunking would break legal atomicity: the LLM needs to cite "R413-17", not "R413-17 chunk 2 of 4". Only 9 articles out of 1163 exceed 1000 words, so single-chunk indexing is the right call here.
 
-The current approach embeds each article as a single chunk. Only 9 articles out of 1161 exceed 1000 words, so the trade-off is acceptable.
-
-If the system is extended to cover other legal codes (e.g., Code pénal, which the Code de la Route frequently cites), a different chunking strategy will be needed since those codes contain much longer articles.
+If extended to other legal codes (e.g., Code pénal, which the Code de la Route frequently cites), a different chunking strategy will be needed.
 
 ### Pinecone with cosine similarity + relevance threshold
 
-Pinecone was chosen after the initial ChromaDB prototype to enable serverless deployment: ChromaDB requires writing to a local filesystem, which is incompatible with ephemeral cloud containers. Pinecone provides a managed vector index accessible over HTTP, with no local state.
+ChromaDB was the initial vector store. It requires a local filesystem, which breaks in ephemeral cloud containers. Pinecone is a managed index accessible over HTTP with no local state, which is what makes deployment on Render possible.
 
-Cosine similarity scores range from 0 to 1 (higher = better). A hard relevance threshold (`score > 0.5`) filters out results that are "best available but still bad". This prevents the generator from hallucinating when the knowledge base genuinely doesn't cover a topic.
+Cosine similarity scores range from 0 to 1. A hard threshold (`score > 0.5`) filters out results that are technically the best available but still a poor match. This stops the generator from producing an answer when the knowledge base genuinely doesn't cover the question.
 
-**Batch processing**: batches of 5 with sleep between batches, tuned for Gemini's free tier rate limits. Exponential backoff (tenacity) handles transient 429s. 400 errors (invalid request, e.g., token overflow) are not retried since they'd fail forever.
+**Ingestion rate limiting**: batches of 5 articles with sleep between batches, tuned for Gemini's free tier. Exponential backoff (tenacity) handles transient 429s. 400 errors (invalid input, token overflow) are not retried since they would fail on every attempt.
 
 ### Provider abstraction
 
-All LLM calls go through an `LLMProvider` ABC (`embed`, `generate_stream`, `classify_intent`). Modules never import `google.genai` directly. This makes testing straightforward (mock the interface, not the SDK) and keeps the door open for multi-provider support without touching pipeline code. Adding a new provider means subclassing `LLMProvider`, the rest of the pipeline is untouched.
-
-Other LLM providers will be added in the future to benchmark them against Gemini on the same evaluation dataset.
+All LLM calls go through an `LLMProvider` ABC (`embed`, `generate_stream`, `classify_intent`). No module imports `google.genai` directly. In tests, you mock the interface, not the SDK. Adding a new provider means subclassing `LLMProvider`; nothing else changes.
 
 ### Generation
 
-The system prompt enforces strict rules: never self-introduce (was adding "Je suis LégiRoute..." to every response), mandatory article citations, no fabrication beyond provided sources, concise structured responses. Each source is presented as a structured block with article number, hierarchy path, content, and Légifrance URL, giving the LLM explicit citation targets.
+The system prompt enforces: no self-introduction, mandatory article citations, no fabrication beyond provided sources, concise structured responses. Each source block contains article number, hierarchy path, content, and Légifrance URL as explicit citation targets.
 
-Max tokens increased from 1000 to 2048 after observing truncated responses mid-sentence on complex multi-article questions.
+Max tokens was raised from 1000 to 2048 after seeing truncated responses on complex multi-article questions.
 
 ### Schema design
 
 | Field | Role |
 |-------|------|
-| `id` | Primary key, direct traceability to source XML. Enables debugging when RAG returns incorrect text |
-| `article_number` | Citation key: the LLM must cite "R413-17", not internal IDs |
-| `content` | Raw text, separated from the embedding blob for clean display |
+| `id` | Primary key, direct traceability to source XML |
+| `article_number` | Citation key used by the LLM ("Selon l'article R413-17...") |
+| `content` | Raw text, separated from the embedding blob |
 | `context` | Hierarchy path: `Code de la route > Partie réglementaire > Livre IV > ...` |
-| `blob_for_embedding` | Computed field, pre-concatenation of context + number + content |
-| `full_url` | Computed field, Légifrance URL reconstructed from ID |
+| `blob_for_embedding` | Computed field, context + number + content concatenated at ingestion |
+| `full_url` | Computed field, Légifrance URL reconstructed from the article ID |
 
 ## Tests
 
@@ -188,11 +163,39 @@ Max tokens increased from 1000 to 2048 after observing truncated responses mid-s
 poetry run pytest tests/ -v
 ```
 
-73 tests covering classification routing, structured output parsing, fallback behavior, context formatting, model validation, XML parsing, and retrieval logic. All tests run without API calls, mocking or pure computation only.
+73 tests covering classification routing, structured output parsing, fallback behavior, context formatting, model validation, XML parsing, and retrieval logic. All tests run without live API calls, mock or pure computation only.
 
-## Automatic database updates*
+## Automatic database updates
 
-A GitHub Actions workflow runs daily at 3 AM UTC. The pipeline authenticates with the [Légifrance PISTE API](https://api.piste.gouv.fr/dila/legifrance/lf-engine-app) via OAuth 2.0 client credentials, fetches the current table of contents for the Code de la Route, then retrieves only the articles not yet in the processed dataset. The Pinecone index is updated accordingly — new articles are embedded and upserted, repealed ones are deleted.
+A GitHub Actions workflow runs daily at 3 AM UTC. It authenticates with the [Légifrance PISTE API](https://api.piste.gouv.fr/dila/legifrance/lf-engine-app) via OAuth 2.0 client credentials, fetches the current table of contents for the Code de la Route, and retrieves only the articles not yet in the processed dataset. New articles are embedded and upserted to Pinecone; repealed ones are deleted.
+
+A `latest_update.md` file is committed daily with the list of added and removed articles.
+
+## Setup
+
+```bash
+# Install dependencies
+poetry install
+
+# Set your API keys
+cp .env.example .env
+# Fill in GOOGLE_API_KEY, PINECONE_API_KEY, LEGIFRANCE_CLIENT_ID, LEGIFRANCE_CLIENT_SECRET
+
+# Update articles from Légifrance API (or use the committed JSON directly)
+poetry run python src/ingestion/download.py
+
+# Build the vector index
+poetry run python src/ingestion/indexing.py
+
+# Run Streamlit app
+poetry run streamlit run src/app.py
+
+# Run CLI
+poetry run python main.py
+
+# Run evaluation
+poetry run python eval/eval_ragas.py
+```
 
 ---
 
