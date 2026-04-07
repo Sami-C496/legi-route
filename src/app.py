@@ -1,3 +1,5 @@
+import logging
+import time
 import streamlit as st
 import sys
 from pathlib import Path
@@ -7,6 +9,13 @@ sys.path.append(str(PROJECT_ROOT))
 
 from src.config import settings
 from src.classifier import Intent
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="LégiRoute AI", page_icon="⚖️", layout="wide")
 st.title("⚖️ LégiRoute")
@@ -37,12 +46,14 @@ if prompt := st.chat_input("Ex: Sanction pour téléphone au volant ?"):
         st.markdown(prompt)
 
     history = st.session_state.messages[1:-1]
+    t0 = time.monotonic()
 
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
 
         intent = rag.classifier.classify(prompt)
+        logger.info("query | intent=%s | turn=%d | q=%s", intent.value, len(history) // 2 + 1, prompt[:120])
 
         if intent == Intent.OFF_TOPIC:
             full_response = "Je suis spécialisé dans le Code de la Route. Je ne peux pas répondre à cette question."
@@ -51,8 +62,11 @@ if prompt := st.chat_input("Ex: Sanction pour téléphone au volant ?"):
             if intent == Intent.LEGAL_QUERY:
                 with st.spinner("Recherche..."):
                     search_query = rag.rewrite_query(prompt, history)
+                    if search_query != prompt:
+                        logger.info("rewrite | %s -> %s", prompt[:80], search_query[:80])
                     results = rag.retriever.search(search_query, k=3)
                     sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
+                    logger.info("retrieval | sources=%d | top_score=%.3f", len(sources), results[0].score if results else 0)
 
                 if sources:
                     with st.expander(f"📚 {len(sources)} articles consultés"):
@@ -67,5 +81,6 @@ if prompt := st.chat_input("Ex: Sanction pour téléphone au volant ?"):
                 placeholder.markdown(full_response + "▌")
 
         placeholder.markdown(full_response)
+        logger.info("done | intent=%s | sources=%d | time=%.2fs", intent.value, len(sources) if intent != Intent.OFF_TOPIC else 0, time.monotonic() - t0)
 
     st.session_state.messages.append({"role": "assistant", "content": full_response})
