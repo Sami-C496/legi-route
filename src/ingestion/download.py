@@ -38,7 +38,7 @@ def _post(path: str, body: dict, token: str) -> dict:
         data=json.dumps(body).encode(),
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=30) as r:
+    with urllib.request.urlopen(req, timeout=60) as r:
         return json.loads(r.read())
 
 
