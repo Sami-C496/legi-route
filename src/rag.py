@@ -38,6 +38,11 @@ _OFF_TOPIC_RESPONSE = (
     "Je ne peux pas répondre à cette question."
 )
 
+_UNAVAILABLE_RESPONSE = (
+    "Le service est momentanément indisponible. "
+    "Veuillez réessayer dans quelques instants."
+)
+
 _REWRITE_PROMPT = """Tu reformules des questions pour un moteur de recherche juridique.
 Si la question fait référence à la conversation précédente (pronoms, "et", "mais", "ça", "il", "elle", références implicites à un sujet précédent), reformule-la en question complète et autonome.
 Si la question est déjà autonome et complète, retourne-la EXACTEMENT telle quelle, sans aucune modification.
@@ -51,6 +56,7 @@ class RAGResponse:
     response: str
     sources: list[RetrievalResult] = field(default_factory=list)
     contexts: list[str] = field(default_factory=list)
+    error: bool = False
 
 
 class RAG:
@@ -83,13 +89,27 @@ class RAG:
 
     def query(self, question: str, k: int = 5, history: list[dict] | None = None) -> RAGResponse:
         """Full RAG pipeline: classify -> retrieve -> generate."""
-        intent = self.classifier.classify(question)
+        try:
+            intent = self.classifier.classify(question)
+        except Exception as e:
+            logger.error("Classification failed (retries exhausted): %s", e)
+            intent = Intent.LEGAL_QUERY
 
         if intent == Intent.OFF_TOPIC:
             return RAGResponse(query=question, intent=intent, response=_OFF_TOPIC_RESPONSE)
 
-        sources = self._retrieve(question, intent, k, history)
-        response = self.generator.generate(question, sources, history=history)
+        try:
+            sources = self._retrieve(question, intent, k, history)
+        except Exception as e:
+            logger.error("Retrieval failed (retries exhausted): %s", e)
+            return RAGResponse(query=question, intent=intent, response=_UNAVAILABLE_RESPONSE, error=True)
+
+        try:
+            response = self.generator.generate(question, sources, history=history)
+        except Exception as e:
+            logger.error("Generation failed (retries exhausted): %s", e)
+            return RAGResponse(query=question, intent=intent, response=_UNAVAILABLE_RESPONSE, error=True)
+
         contexts = [
             f"Article {r.article.article_number} : {r.article.content}"
             for r in sources
@@ -104,15 +124,29 @@ class RAG:
         )
 
     def stream(self, question: str, k: int = 5, history: list[dict] | None = None) -> Iterator[str]:
-        """Streaming variant. Yields response chunks."""
-        intent = self.classifier.classify(question)
+        """Streaming variant with graceful degradation."""
+        try:
+            intent = self.classifier.classify(question)
+        except Exception as e:
+            logger.error("Classification failed (retries exhausted): %s", e)
+            intent = Intent.LEGAL_QUERY
 
         if intent == Intent.OFF_TOPIC:
             yield _OFF_TOPIC_RESPONSE
             return
 
-        sources = self._retrieve(question, intent, k, history)
-        yield from self.generator.generate_stream(question, sources, history=history)
+        try:
+            sources = self._retrieve(question, intent, k, history)
+        except Exception as e:
+            logger.error("Retrieval failed (retries exhausted): %s", e)
+            yield _UNAVAILABLE_RESPONSE
+            return
+
+        try:
+            yield from self.generator.generate_stream(question, sources, history=history)
+        except Exception as e:
+            logger.error("Generation failed (retries exhausted): %s", e)
+            yield _UNAVAILABLE_RESPONSE
 
     def batch(self, questions: list[str], k: int = 3) -> list[RAGResponse]:
         """Run multiple queries. Useful for evaluation."""
