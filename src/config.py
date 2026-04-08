@@ -57,12 +57,17 @@ class Settings(BaseSettings):
     PINECONE_REGION: str = "us-east-1"
     EMBEDDING_DIMENSION: int = 3072
 
-    # Indexing
+    # Indexing (batch)
     BATCH_SIZE: int = 5
     SLEEP_BETWEEN_BATCHES: int = 5
     MAX_RETRIES: int = 20
     RETRY_MIN_WAIT: int = 10
     RETRY_MAX_WAIT: int = 120
+
+    # Query-time retry (interactive)
+    QUERY_MAX_RETRIES: int = 3
+    QUERY_RETRY_MIN_WAIT: float = 1.0
+    QUERY_RETRY_MAX_WAIT: float = 8.0
 
     # Retrieval
     DEFAULT_TOP_K: int = 5
