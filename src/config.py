@@ -10,8 +10,8 @@ class Provider(str, Enum):
 
 PROVIDER_MODELS = {
     Provider.GEMINI: {
-        "classifier": "models/gemini-2.5-flash-lite",
-        "generation": "models/gemini-2.5-flash",
+        "classifier": "models/gemini-2.0-flash-lite",
+        "generation": "models/gemini-2.0-flash",
         "embedding": "gemini-embedding-001",
     },
 }
