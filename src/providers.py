@@ -237,7 +237,7 @@ class GroqProvider(LLMProvider):
                         {"role": "user", "content": prompt},
                     ],
                     temperature=kwargs.get("temperature", settings.GENERATION_TEMPERATURE),
-                    max_completion_tokens=kwargs.get("max_tokens", settings.GENERATION_MAX_TOKENS),
+                    max_tokens=kwargs.get("max_tokens", settings.GENERATION_MAX_TOKENS),
                     stream=True,
                 )
                 for chunk in stream:
@@ -264,7 +264,7 @@ class GroqProvider(LLMProvider):
                 {"role": "user", "content": f"Message utilisateur : {query}"},
             ],
             temperature=0.0,
-            max_completion_tokens=50,
+            max_tokens=50,
             response_format={"type": "json_object"},
         )
         return json.loads(response.choices[0].message.content)
