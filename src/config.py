@@ -7,6 +7,7 @@ from pydantic import Field
 class Provider(str, Enum):
     GEMINI = "gemini"
     OLLAMA = "ollama"
+    GROQ = "groq"
 
 
 PROVIDER_MODELS = {
@@ -20,12 +21,19 @@ PROVIDER_MODELS = {
         "generation": "qwen2.5:7b-instruct",
         "embedding": "nomic-embed-text",
     },
+    Provider.GROQ: {
+        "classifier": "llama-3.1-8b-instant",
+        "generation": "llama-3.3-70b-versatile",
+        # Groq has no embeddings API: GroqProvider delegates embed() to Gemini.
+        "embedding": "gemini-embedding-001",
+    },
 }
 
 # Native embedding dimensions per provider (must match the chosen embedding model).
 PROVIDER_EMBEDDING_DIMENSIONS = {
     Provider.GEMINI: 3072,
     Provider.OLLAMA: 768,
+    Provider.GROQ: 3072,
 }
 
 
@@ -35,7 +43,8 @@ class Settings(BaseSettings):
     PINECONE_API_KEY: str = ""
     LEGIFRANCE_CLIENT_ID: str = ""
     LEGIFRANCE_CLIENT_SECRET: str = ""
-    PROVIDER: Provider = Provider.GEMINI
+    GROQ_API_KEY: str = ""
+    PROVIDER: Provider = Provider.GROQ
 
     # Ollama runtime
     OLLAMA_BASE_URL: str = "http://localhost:11434"

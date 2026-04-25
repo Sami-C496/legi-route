@@ -1,4 +1,4 @@
-.PHONY: install test run cli download index eval lint release ollama-pull run-ollama index-ollama
+.PHONY: install test run cli download index eval lint release ollama-pull run-ollama index-ollama run-groq
 
 VERSION := $(shell python -c "exec(open('src/version.py').read()); print(__version__)")
 
@@ -42,3 +42,6 @@ run-ollama:
 
 index-ollama:
 	PROVIDER=ollama poetry run python src/ingestion/indexing.py
+
+run-groq:
+	PROVIDER=groq poetry run streamlit run src/app.py

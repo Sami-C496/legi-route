@@ -225,6 +225,26 @@ Notes:
 - The deployed Render instance runs on CPU and stays on Gemini; Ollama is intended for local use.
 - To switch back to Gemini, set `PROVIDER=gemini` and `PINECONE_INDEX_NAME=traffic-law-v1`.
 
+### Hosted backend with Groq
+
+[Groq](https://groq.com/) serves open-source models (Llama 3, Qwen, etc.) via an OpenAI-compatible API with a generous free tier and fast inference (LPU).
+
+Groq has no embeddings API, so `GroqProvider` keeps embeddings on Gemini.
+
+```bash
+# In .env:
+#   PROVIDER=groq
+#   GROQ_API_KEY=...
+#   GOOGLE_API_KEY=...   # still needed for embeddings only
+
+# 2. Run the app
+make run-groq
+```
+
+Models used:
+- Generation: `llama-3.3-70b-versatile`
+- Classification: `llama-3.1-8b-instant`
+
 ---
 
 ## Roadmap
@@ -235,7 +255,7 @@ Notes:
 
 **Multi-provider support**
 - A local Ollama backend is already wired in (open-source models, no API key). See [Local backend with Ollama](#local-backend-with-ollama)
-- Add a hosted open-source provider (Groq, Together, OpenRouter) to keep the deployed app off Gemini without needing local hardware. The ABC is already in place, each provider only needs three methods: `embed`, `generate_stream`, `classify_intent`
+- A hosted Groq backend is available for fast, free inference on open-source models. See [Hosted backend with Groq](#hosted-backend-with-groq)
 - Benchmark retrieval quality and answer faithfulness across providers on the same eval dataset
 
 **Retrieval**
