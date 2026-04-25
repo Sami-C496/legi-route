@@ -232,7 +232,6 @@ Notes:
 Groq has no embeddings API, so `GroqProvider` keeps embeddings on Gemini.
 
 ```bash
-# 1. Get a free key at https://console.groq.com/keys
 # In .env:
 #   PROVIDER=groq
 #   GROQ_API_KEY=...
