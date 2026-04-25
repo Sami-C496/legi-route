@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="LégiRoute">
+  <title>LégiRoute</title>
+  <!-- Brand badge -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#2563EB"/>
+
+  <!-- Perspective road (Route) -->
+  <path d="M10 56 L26 24 L38 24 L54 56 Z" fill="#FFFFFF" opacity="0.95"/>
+
+  <!-- Dashed lane marking -->
+  <g stroke="#FBBF24" stroke-width="2.4" stroke-linecap="round">
+    <line x1="32" y1="52" x2="32" y2="48"/>
+    <line x1="32" y1="42" x2="32" y2="38"/>
+    <line x1="32" y1="32" x2="32" y2="29"/>
+  </g>
+
+  <!-- Scales of justice (Légi) -->
+  <line x1="32" y1="14" x2="32" y2="22" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="32" cy="12" r="2" fill="#FFFFFF"/>
+  <line x1="20" y1="16" x2="44" y2="16" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+  <path d="M17 16 L23 16 L20 20 Z" fill="#FFFFFF"/>
+  <path d="M41 16 L47 16 L44 20 Z" fill="#FFFFFF"/>
+</svg>

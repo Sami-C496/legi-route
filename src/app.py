@@ -19,7 +19,10 @@ logger = logging.getLogger(__name__)
 
 _UNAVAILABLE_MSG = "Le service est momentanément surchargé. Veuillez réessayer dans quelques instants."
 
-st.set_page_config(page_title="LégiRoute AI", page_icon="🚗", layout="wide")
+_LOGO_PATH = PROJECT_ROOT / "assets" / "logo.svg"
+_LOGO_SVG = _LOGO_PATH.read_text(encoding="utf-8") if _LOGO_PATH.exists() else ""
+
+st.set_page_config(page_title="LégiRoute AI", page_icon=str(_LOGO_PATH), layout="wide")
 
 _CUSTOM_CSS = """
 <style>
@@ -57,7 +60,13 @@ def _traffic_light(color: str, label: str = "") -> str:
     )
 
 
-st.title("🚗 LégiRoute")
+st.markdown(
+    f'<div style="display:flex;align-items:center;gap:14px;margin-bottom:0.25rem;">'
+    f'<div style="width:52px;height:52px;flex-shrink:0;">{_LOGO_SVG}</div>'
+    f'<h1 style="margin:0;line-height:1;">LégiRoute</h1>'
+    f'</div>',
+    unsafe_allow_html=True,
+)
 st.caption("Assistant Juridique — Code de la Route Français")
 
 
