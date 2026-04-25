@@ -197,6 +197,34 @@ make cli
 make eval
 ```
 
+### Local backend with Ollama
+
+The `LLMProvider` abstraction supports a fully local backend through [Ollama](https://ollama.com/), using open-source models with no API key. Useful for development, offline work, or avoiding paid API quotas.
+
+The embedding dimension differs between backends (Gemini: 3072, nomic-embed-text: 768), so Ollama requires its own Pinecone index. The runtime backend is selected per process via the `PROVIDER` env var; switching is non-destructive as long as you keep separate index names.
+
+```bash
+# 1. Install Ollama and pull the models
+curl -fsSL https://ollama.com/install.sh | sh
+make ollama-pull   # qwen2.5:7b-instruct + nomic-embed-text
+
+# 2. Point the app at Ollama and use a dedicated index
+# In .env:
+#   PROVIDER=ollama
+#   PINECONE_INDEX_NAME=traffic-law-ollama
+
+# 3. Build the Ollama-backed index (one-off, embeds all articles locally)
+make index-ollama
+
+# 4. Run the app against Ollama
+make run-ollama
+```
+
+Notes:
+- Generation latency is hardware-bound. On a CPU-only machine the 7b model is slow; smaller variants (`qwen2.5:3b-instruct`, `qwen2.5:1.5b-instruct`) trade quality for speed.
+- The deployed Render instance runs on CPU and stays on Gemini; Ollama is intended for local use.
+- To switch back to Gemini, set `PROVIDER=gemini` and `PINECONE_INDEX_NAME=traffic-law-v1`.
+
 ---
 
 ## Roadmap
@@ -206,7 +234,8 @@ make eval
 - Swap the LLM judge for a different model than the generator to eliminate self-bias in the RAGAS scores (current setup uses Gemini for both)
 
 **Multi-provider support**
-- Add a second `LLMProvider` implementation (Mistral, OpenAI, or Anthropic). The ABC is already in place, each provider only needs three methods: `embed`, `generate_stream`, `classify_intent`
+- A local Ollama backend is already wired in (open-source models, no API key). See [Local backend with Ollama](#local-backend-with-ollama)
+- Add a hosted open-source provider (Groq, Together, OpenRouter) to keep the deployed app off Gemini without needing local hardware. The ABC is already in place, each provider only needs three methods: `embed`, `generate_stream`, `classify_intent`
 - Benchmark retrieval quality and answer faithfulness across providers on the same eval dataset
 
 **Retrieval**
