@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     # Ollama runtime
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_REQUEST_TIMEOUT: float = 120.0
+    OLLAMA_EMBED_MAX_CHARS: int = 6000
 
     PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 
