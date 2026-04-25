@@ -204,4 +204,67 @@ def get_provider(provider: Provider = None) -> LLMProvider:
         return GeminiProvider()
     if provider == Provider.OLLAMA:
         return OllamaProvider()
+    if provider == Provider.GROQ:
+        return GroqProvider()
     raise ValueError(f"Unknown provider: {provider}")
+
+
+class GroqProvider(LLMProvider):
+    """Hosted provider using Groq for chat and classification.
+
+    Groq has no embeddings API, so embed() delegates to Gemini.
+    Requires GROQ_API_KEY (chat) and GOOGLE_API_KEY (embeddings only).
+    """
+
+    def __init__(self):
+        from groq import Groq
+        if not settings.GROQ_API_KEY:
+            raise ValueError("GROQ_API_KEY is not set")
+        self._client = Groq(api_key=settings.GROQ_API_KEY)
+        self._embedder = GeminiProvider()
+
+    def embed(self, texts, task_type="document"):
+        return self._embedder.embed(texts, task_type=task_type)
+
+    def generate_stream(self, prompt, system, **kwargs):
+        last_exc = None
+        for attempt in range(settings.QUERY_MAX_RETRIES):
+            try:
+                stream = self._client.chat.completions.create(
+                    model=settings.GENERATION_MODEL,
+                    messages=[
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=kwargs.get("temperature", settings.GENERATION_TEMPERATURE),
+                    max_completion_tokens=kwargs.get("max_tokens", settings.GENERATION_MAX_TOKENS),
+                    stream=True,
+                )
+                for chunk in stream:
+                    piece = chunk.choices[0].delta.content
+                    if piece:
+                        yield piece
+                return
+            except Exception as e:
+                last_exc = e
+                if not _is_query_retriable(e):
+                    raise
+                wait = min(settings.QUERY_RETRY_MIN_WAIT * (2 ** attempt), settings.QUERY_RETRY_MAX_WAIT)
+                logger.warning("groq generate_stream attempt %d/%d failed: %s. Retrying in %.1fs",
+                               attempt + 1, settings.QUERY_MAX_RETRIES, e, wait)
+                time.sleep(wait)
+        raise last_exc
+
+    @_query_retry()
+    def classify_intent(self, query, system):
+        response = self._client.chat.completions.create(
+            model=settings.CLASSIFIER_MODEL,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": f"Message utilisateur : {query}"},
+            ],
+            temperature=0.0,
+            max_completion_tokens=50,
+            response_format={"type": "json_object"},
+        )
+        return json.loads(response.choices[0].message.content)
