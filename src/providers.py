@@ -145,7 +145,8 @@ class OllamaProvider(LLMProvider):
     @_query_retry()
     def embed(self, texts, task_type="document"):
         prefix = self._prefix_for_task(task_type)
-        prefixed = [f"{prefix}{t}" for t in texts]
+        max_chars = settings.OLLAMA_EMBED_MAX_CHARS
+        prefixed = [f"{prefix}{t}"[:max_chars] for t in texts]
         response = self._client.embed(model=settings.EMBEDDING_MODEL, input=prefixed)
         return list(response["embeddings"])
 
