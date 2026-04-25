@@ -125,9 +125,82 @@ class GeminiProvider(LLMProvider):
         return json.loads(response.text)
 
 
+class OllamaProvider(LLMProvider):
+    """Local provider backed by an Ollama daemon (open-source models, free inference).
+
+    Requires:
+        - Ollama running at settings.OLLAMA_BASE_URL
+        - Generation model and embedding model pulled (`ollama pull <model>`)
+    """
+
+    def __init__(self):
+        from ollama import Client
+        self._client = Client(host=settings.OLLAMA_BASE_URL, timeout=settings.OLLAMA_REQUEST_TIMEOUT)
+
+    @staticmethod
+    def _prefix_for_task(task_type: str) -> str:
+        # nomic-embed-text is trained with these prefixes; harmless for other models.
+        return "search_query: " if task_type == "query" else "search_document: "
+
+    @_query_retry()
+    def embed(self, texts, task_type="document"):
+        prefix = self._prefix_for_task(task_type)
+        prefixed = [f"{prefix}{t}" for t in texts]
+        response = self._client.embed(model=settings.EMBEDDING_MODEL, input=prefixed)
+        return list(response["embeddings"])
+
+    def generate_stream(self, prompt, system, **kwargs):
+        last_exc = None
+        options = {
+            "temperature": kwargs.get("temperature", settings.GENERATION_TEMPERATURE),
+            "num_predict": kwargs.get("max_tokens", settings.GENERATION_MAX_TOKENS),
+        }
+        for attempt in range(settings.QUERY_MAX_RETRIES):
+            try:
+                stream = self._client.chat(
+                    model=settings.GENERATION_MODEL,
+                    messages=[
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": prompt},
+                    ],
+                    options=options,
+                    stream=True,
+                )
+                for chunk in stream:
+                    piece = chunk.get("message", {}).get("content")
+                    if piece:
+                        yield piece
+                return
+            except Exception as e:
+                last_exc = e
+                if not _is_query_retriable(e):
+                    raise
+                wait = min(settings.QUERY_RETRY_MIN_WAIT * (2 ** attempt), settings.QUERY_RETRY_MAX_WAIT)
+                logger.warning("ollama generate_stream attempt %d/%d failed: %s. Retrying in %.1fs",
+                               attempt + 1, settings.QUERY_MAX_RETRIES, e, wait)
+                time.sleep(wait)
+        raise last_exc
+
+    @_query_retry()
+    def classify_intent(self, query, system):
+        response = self._client.chat(
+            model=settings.CLASSIFIER_MODEL,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": f"Message utilisateur : {query}"},
+            ],
+            options={"temperature": 0.0, "num_predict": 50},
+            format="json",
+        )
+        text = response["message"]["content"].strip()
+        return json.loads(text)
+
+
 def get_provider(provider: Provider = None) -> LLMProvider:
     """Factory: returns the configured provider instance."""
     provider = provider or settings.PROVIDER
     if provider == Provider.GEMINI:
         return GeminiProvider()
+    if provider == Provider.OLLAMA:
+        return OllamaProvider()
     raise ValueError(f"Unknown provider: {provider}")

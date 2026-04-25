@@ -6,6 +6,7 @@ from pydantic import Field
 
 class Provider(str, Enum):
     GEMINI = "gemini"
+    OLLAMA = "ollama"
 
 
 PROVIDER_MODELS = {
@@ -14,6 +15,17 @@ PROVIDER_MODELS = {
         "generation": "models/gemini-3.1-flash-lite-preview",
         "embedding": "gemini-embedding-001",
     },
+    Provider.OLLAMA: {
+        "classifier": "qwen2.5:7b-instruct",
+        "generation": "qwen2.5:7b-instruct",
+        "embedding": "nomic-embed-text",
+    },
+}
+
+# Native embedding dimensions per provider (must match the chosen embedding model).
+PROVIDER_EMBEDDING_DIMENSIONS = {
+    Provider.GEMINI: 3072,
+    Provider.OLLAMA: 768,
 }
 
 
@@ -24,6 +36,10 @@ class Settings(BaseSettings):
     LEGIFRANCE_CLIENT_ID: str = ""
     LEGIFRANCE_CLIENT_SECRET: str = ""
     PROVIDER: Provider = Provider.GEMINI
+
+    # Ollama runtime
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_REQUEST_TIMEOUT: float = 120.0
 
     PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 
@@ -55,7 +71,10 @@ class Settings(BaseSettings):
     PINECONE_INDEX_NAME: str = "traffic-law-v1"
     PINECONE_CLOUD: str = "aws"
     PINECONE_REGION: str = "us-east-1"
-    EMBEDDING_DIMENSION: int = 3072
+
+    @property
+    def EMBEDDING_DIMENSION(self) -> int:
+        return PROVIDER_EMBEDDING_DIMENSIONS[self.PROVIDER]
 
     # Indexing (batch)
     BATCH_SIZE: int = 5
