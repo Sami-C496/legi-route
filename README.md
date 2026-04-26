@@ -2,7 +2,9 @@
 
 [![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB)](https://www.python.org/)
 [![Poetry](https://img.shields.io/badge/Dependency-Poetry-blueviolet)](https://python-poetry.org/)
-[![Streamlit](https://img.shields.io/badge/Frontend-Streamlit-FF4B4B)](https://streamlit.io/)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/Frontend-React_18-61DAFB)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Bundler-Vite_5-646CFF)](https://vitejs.dev/)
 [![Pinecone](https://img.shields.io/badge/Vector_DB-Pinecone-1C3C3C)](https://www.pinecone.io/)
 [![Gemini Embedding](https://img.shields.io/badge/Embedding-Gemini_001-512BD4)](https://ai.google.dev/gemini-api/docs/models/gemini#text-embedding)
 [![Gemini](https://img.shields.io/badge/Model-Gemini_2.5_Flash-4285F4)](https://deepmind.google/technologies/gemini/)
@@ -187,7 +189,13 @@ make download
 # Build the vector index
 make index
 
-# Run Streamlit app
+# Run the FastAPI backend (http://localhost:8000)
+make run-api
+
+# In a second terminal, run the React frontend (http://localhost:5173)
+make dev-web
+
+# Or the legacy Streamlit app
 make run
 
 # Run CLI
@@ -244,6 +252,90 @@ make run-groq
 Models used:
 - Generation: `llama-3.3-70b-versatile`
 - Classification: `llama-3.1-8b-instant`
+
+---
+
+## Web stack: FastAPI + React
+
+The original Streamlit UI is still available (`make run`), but the production frontend is now a React single-page app served by Vite, talking to a FastAPI backend that wraps the existing `RAG` pipeline.
+
+### Why move off Streamlit
+
+- **Streaming**: Streamlit renders token-by-token by re-running the script, which scales poorly and forces server-side state. FastAPI streams tokens over Server-Sent Events (SSE), the React client appends them to the DOM directly. No re-renders, no flicker.
+- **Decoupling**: the RAG pipeline is now reachable from any HTTP client (CLI, mobile, another service). Streamlit locked it to a single Python process.
+- **UI control**: editorial typography (Fraunces serif for answers, Inter sans for UI, JetBrains Mono for article numbers), explicit citation cards, and a header status indicator that ships with the design system.
+
+### Backend: `src/api/`
+
+```
+src/api/
+  main.py           # FastAPI app + CORS + router mounting
+  deps.py           # @lru_cache get_rag() — singleton RAG instance, overridable in tests
+  schemas.py        # Pydantic v2 request / response models
+  sse.py            # SSE event formatter
+  routes/
+    health.py       # GET /api/health
+    chat.py         # POST /api/chat → text/event-stream
+```
+
+`POST /api/chat` returns an SSE stream. Events emitted in order:
+
+| Event | When | Payload |
+|-------|------|---------|
+| `intent` | always, first | `{ "intent": "LEGAL_QUERY" \| "CHITCHAT" \| "OFF_TOPIC" }` |
+| `sources` | LEGAL_QUERY only | `[{ "article_number", "url", "excerpt", "score" }]` |
+| `token` | repeated | `{ "text": "..." }` |
+| `done` | terminal | `{}` |
+| `error` | on failure | `{ "message": "..." }` |
+
+The handler short-circuits OFF_TOPIC with a polite refusal message, runs query rewriting + retrieval for LEGAL_QUERY, and falls back to a direct LLM response for CHITCHAT — same behaviour as the Streamlit app, exposed over HTTP.
+
+Run it standalone:
+
+```bash
+make run-api          # uvicorn src.api.main:app --reload --port 8000
+curl http://localhost:8000/api/health
+```
+
+Six integration tests cover the full event flow per intent, the empty-prompt 422, and the retrieval-failure path. They use `TestClient` with `app.dependency_overrides[get_rag]` to inject a mocked RAG, so no live API keys are required.
+
+### Frontend: `frontend/`
+
+Vite + React 18 + TypeScript + Tailwind. Editorial palette (paper, ink, marine, signal red/green) defined in `tailwind.config.ts`.
+
+```
+frontend/
+  src/
+    App.tsx                 # Main shell: header / messages / input
+    components/
+      Wordmark.tsx          # Logo + brand text
+      StatusDot.tsx         # 3-dot traffic light (red while loading, green when idle)
+      Message.tsx           # Assistant answer in Fraunces serif + cited SourceCards
+      SourceCard.tsx        # Article number + excerpt + Légifrance link
+      ChatInput.tsx         # Textarea, Enter to send, Shift+Enter for newline
+    lib/
+      sse.ts                # Browser SSE parser (async generator over `Response.body`)
+      api.ts                # streamChat(prompt, history, callbacks)
+    styles/globals.css      # Tailwind base + font imports
+  vite.config.ts            # /api proxied to localhost:8000
+```
+
+Run it (with the API already running on port 8000):
+
+```bash
+make dev-web          # cd frontend && npm install && npm run dev
+# → http://localhost:5173
+```
+
+Production build:
+
+```bash
+make build-web        # cd frontend && npm run build → frontend/dist/
+```
+
+### Talking to the API from a notebook
+
+`docs/api_walkthrough.ipynb` walks through the SSE protocol with a minimal `httpx`-based parser, calls each endpoint live, and demos in-process testing via `TestClient`.
 
 ---
 

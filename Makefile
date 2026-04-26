@@ -11,6 +11,15 @@ test:
 run:
 	poetry run streamlit run src/app.py
 
+run-api:
+	poetry run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+
+dev-web:
+	cd frontend && npm install && npm run dev
+
+build-web:
+	cd frontend && npm install && npm run build
+
 cli:
 	poetry run python main.py
 
