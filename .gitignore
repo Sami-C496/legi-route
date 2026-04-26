@@ -29,3 +29,12 @@ Thumbs.db
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Frontend (Node / Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/tsconfig.tsbuildinfo
+
+# Local screenshots / scratch
+image.png
