@@ -213,7 +213,9 @@ class GroqProvider(LLMProvider):
     """Hosted provider using Groq for chat and classification.
 
     Groq has no embeddings API, so embed() delegates to Gemini.
-    Requires GROQ_API_KEY (chat) and GOOGLE_API_KEY (embeddings only).
+    Falls back to GeminiProvider for chat/classify when Groq raises an
+    unrecoverable error (rate limit exhausted, model unavailable...).
+    Requires GROQ_API_KEY (chat) and GOOGLE_API_KEY (embeddings + fallback).
     """
 
     def __init__(self):
@@ -221,10 +223,16 @@ class GroqProvider(LLMProvider):
         if not settings.GROQ_API_KEY:
             raise ValueError("GROQ_API_KEY is not set")
         self._client = Groq(api_key=settings.GROQ_API_KEY)
-        self._embedder = GeminiProvider()
+        self._fallback = GeminiProvider()
+
+    @staticmethod
+    def _is_groq_quota_error(exc: Exception) -> bool:
+        """Detect terminal Groq errors that justify falling back to Gemini."""
+        s = str(exc).lower()
+        return "rate_limit" in s or "429" in s or "quota" in s or "tokens per day" in s
 
     def embed(self, texts, task_type="document"):
-        return self._embedder.embed(texts, task_type=task_type)
+        return self._fallback.embed(texts, task_type=task_type)
 
     def generate_stream(self, prompt, system, **kwargs):
         last_exc = None
@@ -247,6 +255,10 @@ class GroqProvider(LLMProvider):
                 return
             except Exception as e:
                 last_exc = e
+                if self._is_groq_quota_error(e):
+                    logger.warning("Groq quota exceeded, falling back to Gemini: %s", e)
+                    yield from self._fallback.generate_stream(prompt, system, **kwargs)
+                    return
                 if not _is_query_retriable(e):
                     raise
                 wait = min(settings.QUERY_RETRY_MIN_WAIT * (2 ** attempt), settings.QUERY_RETRY_MAX_WAIT)
@@ -257,14 +269,20 @@ class GroqProvider(LLMProvider):
 
     @_query_retry()
     def classify_intent(self, query, system):
-        response = self._client.chat.completions.create(
-            model=settings.CLASSIFIER_MODEL,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": f"Message utilisateur : {query}"},
-            ],
-            temperature=0.0,
-            max_tokens=50,
-            response_format={"type": "json_object"},
-        )
-        return json.loads(response.choices[0].message.content)
+        try:
+            response = self._client.chat.completions.create(
+                model=settings.CLASSIFIER_MODEL,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": f"Message utilisateur : {query}"},
+                ],
+                temperature=0.0,
+                max_tokens=50,
+                response_format={"type": "json_object"},
+            )
+            return json.loads(response.choices[0].message.content)
+        except Exception as e:
+            if self._is_groq_quota_error(e):
+                logger.warning("Groq quota exceeded on classify, falling back to Gemini: %s", e)
+                return self._fallback.classify_intent(query, system)
+            raise

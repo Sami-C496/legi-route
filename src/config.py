@@ -23,7 +23,7 @@ PROVIDER_MODELS = {
     },
     Provider.GROQ: {
         "classifier": "llama-3.1-8b-instant",
-        "generation": "llama-3.3-70b-versatile",
+        "generation": "llama-3.1-8b-instant",
         # Groq has no embeddings API: GroqProvider delegates embed() to Gemini.
         "embedding": "gemini-embedding-001",
     },
