@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Wordmark } from './components/Wordmark'
 import { StatusDot, type Status } from './components/StatusDot'
+import { ThemeToggle } from './components/ThemeToggle'
 import { ChatInput } from './components/ChatInput'
 import { Message, type ChatMessage } from './components/Message'
 import { streamChat, type ChatTurn } from './lib/api'
@@ -67,7 +68,10 @@ export default function App() {
       <header className="border-b border-rule bg-paper">
         <div className="mx-auto flex w-full max-w-column items-center justify-between px-6 py-5">
           <Wordmark />
-          <StatusDot status={status} />
+          <div className="flex items-center gap-3">
+            <StatusDot status={status} />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

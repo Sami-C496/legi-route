@@ -9,12 +9,29 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --paper: #F5F4EF;
+    --vellum: #FFFFFF;
+    --rule: #E5E2D8;
+    --ink: #0B1220;
+    --slate: #6B7280;
+    --marine: #1A365D;
+  }
+  .dark {
+    --paper: #0F141A;
+    --vellum: #1A1F26;
+    --rule: #2C3340;
+    --ink: #E8EAED;
+    --slate: #9AA3B2;
+    --marine: #7CB0E0;
+  }
   html, body, #root { height: 100%; }
   body {
     @apply bg-paper text-ink font-sans antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
-  ::selection { background: #1A365D; color: #fff; }
+  ::selection { background: var(--marine); color: var(--vellum); }
 }
 
 @layer components {

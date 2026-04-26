@@ -2,15 +2,16 @@ import type { Config } from 'tailwindcss'
 
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        paper: '#F5F4EF',
-        vellum: '#FFFFFF',
-        rule: '#E5E2D8',
-        ink: '#0B1220',
-        slate: '#6B7280',
-        marine: '#1A365D',
+        paper: 'var(--paper)',
+        vellum: 'var(--vellum)',
+        rule: 'var(--rule)',
+        ink: 'var(--ink)',
+        slate: 'var(--slate)',
+        marine: 'var(--marine)',
         signal: { red: '#C0392B', green: '#3F7D5C', off: '#3A3A3A' },
       },
       borderRadius: { sm: '4px', md: '6px', lg: '8px' },
