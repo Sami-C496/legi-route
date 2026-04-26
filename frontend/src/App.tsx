@@ -75,8 +75,7 @@ export default function App() {
         <div className="mx-auto w-full max-w-column px-6 py-10">
           {messages.length === 0 ? (
             <p className="font-serif text-[18px] leading-relaxed text-slate">
-              Posez une question sur le Code de la Route — la réponse s'appuiera sur les
-              articles officiels en vigueur, cités et reliés à Légifrance.
+              Je réponds à vos questions sur le Code de la Route avec précision, en citant systématiquement les articles officiels.
             </p>
           ) : (
             <div className="flex flex-col gap-7">

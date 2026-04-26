@@ -23,7 +23,7 @@ export default {
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       maxWidth: {
-        column: '720px',
+        column: '920px',
       },
       keyframes: {
         pulse: {
