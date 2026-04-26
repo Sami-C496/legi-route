@@ -38,3 +38,6 @@ frontend/tsconfig.tsbuildinfo
 
 # Local screenshots / scratch
 image.png
+
+# Stray compiled JS in frontend/src (TS source only)
+frontend/src/**/*.js
