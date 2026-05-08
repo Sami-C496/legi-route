@@ -38,8 +38,25 @@ class TrafficRetriever:
             logger.error(f"Pinecone query failed: {e}")
             return []
 
+        return self._parse_matches(results.matches)
+
+    def search_by_vector(self, vector: list[float], k: int = None) -> list[RetrievalResult]:
+        """Query Pinecone with a pre-computed embedding vector."""
+        k = k or settings.DEFAULT_TOP_K
+        try:
+            results = self.index.query(
+                vector=vector,
+                top_k=k,
+                include_metadata=True,
+            )
+        except Exception as e:
+            logger.error(f"Pinecone query failed: {e}")
+            return []
+        return self._parse_matches(results.matches)
+
+    def _parse_matches(self, matches) -> list[RetrievalResult]:
         clean_results = []
-        for match in results.matches:
+        for match in matches:
             try:
                 meta = match.metadata
                 article = TrafficLawArticle(
@@ -51,5 +68,4 @@ class TrafficRetriever:
                 clean_results.append(RetrievalResult(article=article, score=match.score))
             except Exception as e:
                 logger.warning(f"Failed to parse match {match.id}: {e}")
-
         return clean_results

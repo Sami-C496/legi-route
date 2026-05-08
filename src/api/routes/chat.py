@@ -1,5 +1,6 @@
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Iterator
 
 from fastapi import APIRouter, Depends
@@ -32,57 +33,69 @@ def _stream_chat(req: ChatRequest, rag: RAG) -> Iterator[str]:
     prompt = req.prompt
     t0 = time.monotonic()
 
+    # Step 1: rewrite the query so classification sees the full intent.
+    # With no history this is instant (returns the question as-is).
+    search_query = rag.rewrite_query(prompt, history)
+
+    # Step 2: classify the rewritten query and speculatively embed it — in parallel.
+    executor = ThreadPoolExecutor(max_workers=2)
+    classify_future = executor.submit(rag.classifier.classify, search_query)
+    embed_future = executor.submit(rag.retriever.provider.embed, [search_query], "query")
+
     try:
-        intent = rag.classifier.classify(prompt)
-    except Exception as e:
-        logger.error("Classification unavailable: %s", e)
-        intent = Intent.LEGAL_QUERY
-    yield sse("intent", {"intent": intent.value})
-
-    if intent == Intent.OFF_TOPIC:
-        yield sse("token", {"text": _OFF_TOPIC_MSG})
-        yield sse("done", {"elapsed": round(time.monotonic() - t0, 3)})
-        return
-
-    sources = []
-    if intent == Intent.LEGAL_QUERY:
         try:
-            search_query = rag.rewrite_query(prompt, history)
-            results = rag.retriever.search(search_query, k=req.k)
-            sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
+            intent = classify_future.result()
         except Exception as e:
-            logger.error("Retrieval unavailable: %s", e)
-            yield sse("token", {"text": _UNAVAILABLE_MSG})
+            logger.error("Classification unavailable: %s", e)
+            intent = Intent.LEGAL_QUERY
+        yield sse("intent", {"intent": intent.value})
+
+        if intent == Intent.OFF_TOPIC:
+            yield sse("token", {"text": _OFF_TOPIC_MSG})
             yield sse("done", {"elapsed": round(time.monotonic() - t0, 3)})
             return
 
-        yield sse(
-            "sources",
-            [
-                {
-                    "article_number": r.article.article_number,
-                    "url": r.article.full_url,
-                    "excerpt": _excerpt(r.article.content),
-                    "score": round(r.score, 4),
-                }
-                for r in sources
-            ],
+        sources = []
+        if intent == Intent.LEGAL_QUERY:
+            try:
+                query_vector = embed_future.result()[0]
+                results = rag.retriever.search_by_vector(query_vector, k=req.k)
+                sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
+            except Exception as e:
+                logger.error("Retrieval unavailable: %s", e)
+                yield sse("token", {"text": _UNAVAILABLE_MSG})
+                yield sse("done", {"elapsed": round(time.monotonic() - t0, 3)})
+                return
+
+            yield sse(
+                "sources",
+                [
+                    {
+                        "article_number": r.article.article_number,
+                        "url": r.article.full_url,
+                        "excerpt": _excerpt(r.article.content),
+                        "score": round(r.score, 4),
+                    }
+                    for r in sources
+                ],
+            )
+
+        try:
+            for chunk in rag.generator.generate_stream(prompt, sources, history=history):
+                yield sse("token", {"text": chunk})
+        except Exception as e:
+            logger.error("Generation error: %s", e)
+            yield sse("error", {"message": _UNAVAILABLE_MSG})
+            yield sse("done", {"elapsed": round(time.monotonic() - t0, 3)})
+            return
+
+        elapsed = round(time.monotonic() - t0, 3)
+        logger.info(
+            "chat | intent=%s | sources=%d | elapsed=%.2fs", intent.value, len(sources), elapsed
         )
-
-    try:
-        for chunk in rag.generator.generate_stream(prompt, sources, history=history):
-            yield sse("token", {"text": chunk})
-    except Exception as e:
-        logger.error("Generation error: %s", e)
-        yield sse("error", {"message": _UNAVAILABLE_MSG})
-        yield sse("done", {"elapsed": round(time.monotonic() - t0, 3)})
-        return
-
-    elapsed = round(time.monotonic() - t0, 3)
-    logger.info(
-        "chat | intent=%s | sources=%d | elapsed=%.2fs", intent.value, len(sources), elapsed
-    )
-    yield sse("done", {"elapsed": elapsed})
+        yield sse("done", {"elapsed": elapsed})
+    finally:
+        executor.shutdown(wait=False)
 
 
 @router.post("/chat")
