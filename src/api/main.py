@@ -17,6 +17,19 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+
+class _HealthCheckFilter(logging.Filter):
+    _count = 0
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if "GET /api/health" not in record.getMessage():
+            return True
+        _HealthCheckFilter._count += 1
+        return _HealthCheckFilter._count % 100 == 0
+
+
+logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
+
 app = FastAPI(
     title="LégiRoute API",
     description="HTTP API for the LégiRoute RAG assistant (French Highway Code).",
