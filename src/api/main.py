@@ -18,17 +18,17 @@ logging.basicConfig(
 )
 
 
-class _HealthCheckFilter(logging.Filter):
-    _count = 0
-
+class _NoiseFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        if "GET /api/health" not in record.getMessage():
-            return True
-        _HealthCheckFilter._count += 1
-        return _HealthCheckFilter._count % 100 == 0
+        msg = record.getMessage()
+        if "GET /api/health" in msg:
+            return False
+        if "304 Not Modified" in msg:
+            return False
+        return True
 
 
-logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
+logging.getLogger("uvicorn.access").addFilter(_NoiseFilter())
 
 app = FastAPI(
     title="LégiRoute API",
