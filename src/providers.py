@@ -91,6 +91,7 @@ class GeminiProvider(LLMProvider):
                         system_instruction=system,
                         temperature=kwargs.get("temperature", settings.GENERATION_TEMPERATURE),
                         max_output_tokens=kwargs.get("max_tokens", settings.GENERATION_MAX_TOKENS),
+                        thinking_config=self._types.ThinkingConfig(thinking_budget=0),
                     ),
                 )
                 for chunk in response:
@@ -120,6 +121,7 @@ class GeminiProvider(LLMProvider):
                 max_output_tokens=50,
                 response_mime_type="application/json",
                 response_schema=INTENT_SCHEMA,
+                thinking_config=self._types.ThinkingConfig(thinking_budget=0),
             ),
         )
         return json.loads(response.text)
