@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     LEGIFRANCE_CLIENT_ID: str = ""
     LEGIFRANCE_CLIENT_SECRET: str = ""
     GROQ_API_KEY: str = ""
-    PROVIDER: Provider = Provider.GROQ
+    PROVIDER: Provider = Provider.GEMINI
 
     # Ollama runtime
     OLLAMA_BASE_URL: str = "http://localhost:11434"
