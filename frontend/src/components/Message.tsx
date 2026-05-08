@@ -55,7 +55,7 @@ export function Message({ message }: { message: ChatMessage }) {
           ))}
         </div>
       )}
-      <div className="font-serif text-[17px] leading-[1.65] text-ink prose prose-slate max-w-none">
+      <div className="font-serif text-[17px] leading-[1.65] text-ink prose prose-slate dark:prose-invert max-w-none [&_*]:text-ink [&_strong]:text-ink [&_a]:text-marine">
         <ReactMarkdown>{message.content}</ReactMarkdown>
         {message.streaming && (
           <span className="ml-0.5 inline-block h-[1.1em] w-[2px] -mb-[2px] bg-ink align-middle animate-caret" />
