@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import type { Source } from './SourceCard'
 import { SourceCard } from './SourceCard'
 
@@ -54,8 +55,8 @@ export function Message({ message }: { message: ChatMessage }) {
           ))}
         </div>
       )}
-      <div className="whitespace-pre-wrap font-serif text-[17px] leading-[1.65] text-ink">
-        {message.content}
+      <div className="font-serif text-[17px] leading-[1.65] text-ink prose prose-slate max-w-none">
+        <ReactMarkdown>{message.content}</ReactMarkdown>
         {message.streaming && (
           <span className="ml-0.5 inline-block h-[1.1em] w-[2px] -mb-[2px] bg-ink align-middle animate-caret" />
         )}
