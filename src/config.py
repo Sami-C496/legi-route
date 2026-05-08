@@ -12,8 +12,8 @@ class Provider(str, Enum):
 
 PROVIDER_MODELS = {
     Provider.GEMINI: {
-        "classifier": "models/gemini-3.1-flash-lite-preview",
-        "generation": "models/gemini-3.1-flash-lite-preview",
+        "classifier": "models/gemini-3.1-flash-lite",
+        "generation": "models/gemini-3.1-flash-lite",
         "embedding": "gemini-embedding-001",
     },
     Provider.OLLAMA: {
