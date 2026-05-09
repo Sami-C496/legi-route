@@ -1,33 +1,7 @@
 # Dernière mise à jour
 
-**Date :** 2026-05-08
+**Date :** 2026-05-09
 
 **Total :** 1163 articles en vigueur  
-**Ajoutés :** 11  
-**Retirés :** 11
-
-## Articles ajoutés
-- **R221-3-4** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés 
-- **R221-3-5** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés 
-- **R221-3-7** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés 
-- **R221-3-8** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés 
-- **R221-3-9** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés 
-- **R221-3-10** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés 
-- **R221-3-11** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés 
-- **R221-3-12** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés 
-- **R221-3-15** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés 
-- **R221-3-16** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés 
-- **R221-3-17** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés 
-
-## Articles retirés
-- **R221-3-5** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés
-- **R221-3-4** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés
-- **R221-3-15** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés
-- **R221-3-10** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés
-- **R221-3-16** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés
-- **R221-3-12** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés
-- **R221-3-11** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés
-- **R221-3-9** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés
-- **R221-3-8** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés
-- **R221-3-17** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés
-- **R221-3-7** — Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés
+**Ajoutés :** 0  
+**Retirés :** 0
