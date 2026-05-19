@@ -33,12 +33,20 @@ def _stream_chat(req: ChatRequest, rag: RAG) -> Iterator[str]:
     prompt = req.prompt
     t0 = time.monotonic()
 
-    # Step 1: classify on the original prompt and rewrite for retrieval in parallel.
-    # Intent is stable under query rewriting, so we don't need the rewritten query
-    # for classification — this eliminates a sequential 2s LLM call from the hot path.
-    executor = ThreadPoolExecutor(max_workers=2)
+    # Classify on the original prompt and rewrite for retrieval in parallel.
+    # Intent is stable under query rewriting so classify doesn't need the rewrite.
+    # A third task chains off rewrite: as soon as the rewritten query is ready it
+    # immediately embeds it, running in parallel with the (slow) classify call.
+    executor = ThreadPoolExecutor(max_workers=3)
     classify_future = executor.submit(rag.classifier.classify, prompt)
     rewrite_future = executor.submit(rag.rewrite_query, prompt, history)
+
+    def _rewrite_then_embed() -> tuple[str, list[float]]:
+        sq = rewrite_future.result()
+        vec = rag.retriever.provider.embed([sq], "query")[0]
+        return sq, vec
+
+    retrieval_future = executor.submit(_rewrite_then_embed)
 
     try:
         try:
@@ -56,8 +64,7 @@ def _stream_chat(req: ChatRequest, rag: RAG) -> Iterator[str]:
         sources = []
         if intent == Intent.LEGAL_QUERY:
             try:
-                search_query = rewrite_future.result()
-                query_vector = rag.retriever.provider.embed([search_query], "query")[0]
+                search_query, query_vector = retrieval_future.result()
                 results = rag.retriever.search_by_vector(query_vector, k=req.k)
                 sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
             except Exception as e:

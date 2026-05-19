@@ -122,6 +122,9 @@ class GeminiProvider(LLMProvider):
                 response_mime_type="application/json",
                 response_schema=INTENT_SCHEMA,
                 thinking_config=self._types.ThinkingConfig(thinking_budget=0),
+                automatic_function_calling=self._types.AutomaticFunctionCallingConfig(
+                    disable=True
+                ),
             ),
         )
         return json.loads(response.text)
