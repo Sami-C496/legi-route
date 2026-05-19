@@ -106,7 +106,7 @@ def test_chat_retrieval_failure_returns_unavailable_message(client):
     rag = MagicMock()
     rag.classifier.classify.return_value = Intent.LEGAL_QUERY
     rag.rewrite_query.return_value = "x"
-    rag.retriever.search.side_effect = RuntimeError("pinecone down")
+    rag.retriever.search_by_vector.side_effect = RuntimeError("pinecone down")
     app.dependency_overrides[get_rag] = lambda: rag
 
     response = client.post("/api/chat", json={"prompt": "Vitesse autoroute ?"})
