@@ -33,14 +33,12 @@ def _stream_chat(req: ChatRequest, rag: RAG) -> Iterator[str]:
     prompt = req.prompt
     t0 = time.monotonic()
 
-    # Step 1: rewrite the query so classification sees the full intent.
-    # With no history this is instant (returns the question as-is).
-    search_query = rag.rewrite_query(prompt, history)
-
-    # Step 2: classify the rewritten query and speculatively embed it — in parallel.
+    # Step 1: classify on the original prompt and rewrite for retrieval in parallel.
+    # Intent is stable under query rewriting, so we don't need the rewritten query
+    # for classification — this eliminates a sequential 2s LLM call from the hot path.
     executor = ThreadPoolExecutor(max_workers=2)
-    classify_future = executor.submit(rag.classifier.classify, search_query)
-    embed_future = executor.submit(rag.retriever.provider.embed, [search_query], "query")
+    classify_future = executor.submit(rag.classifier.classify, prompt)
+    rewrite_future = executor.submit(rag.rewrite_query, prompt, history)
 
     try:
         try:
@@ -58,7 +56,8 @@ def _stream_chat(req: ChatRequest, rag: RAG) -> Iterator[str]:
         sources = []
         if intent == Intent.LEGAL_QUERY:
             try:
-                query_vector = embed_future.result()[0]
+                search_query = rewrite_future.result()
+                query_vector = rag.retriever.provider.embed([search_query], "query")[0]
                 results = rag.retriever.search_by_vector(query_vector, k=req.k)
                 sources = [r for r in results if r.score > settings.RELEVANCE_THRESHOLD]
             except Exception as e:
