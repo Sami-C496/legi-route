@@ -1488,12 +1488,6 @@
     "context": "Code de la route > Partie législative > Livre 3 : Le véhicule > Titre 1er : Dispositions techniques > Chapitre 8 : Energie, émissions polluantes et nuisances."
   },
   {
-    "id": "LEGIARTI000031066436",
-    "article_number": "L327-2",
-    "content": "En cas d'accord du propriétaire de céder le véhicule à l'assureur, celui-ci transmet le certificat d'immatriculation du véhicule à l'autorité administrative compétente. L'assureur doit vendre le véhicule à un acheteur professionnel pour destruction, réparation ou récupération des pièces en vue de leur revente ou reconstruction. Lorsqu'il s'agit d'une voiture particulière ou d'une camionnette destinée à la destruction ou à la récupération des pièces en vue de leur revente ou reconstruction, l'assureur remet le véhicule à un centre de véhicules hors d'usage agréé. En cas de réparation du véhicule, celui-ci ne peut être remis en circulation et faire l'objet d'une réimmatriculation qu'au vu du rapport d'expertise certifiant que ledit véhicule a fait l'objet des réparations touchant à la sécurité prévues par le premier rapport d'expertise et qu'il est en état de circuler dans des conditions normales de sécurité.",
-    "context": "Code de la route > Partie législative > Livre 3 : Le véhicule > Titre 2 : Dispositions administratives > Chapitre 7 : Véhicules endommagés."
-  },
-  {
     "id": "LEGIARTI000031066366",
     "article_number": "L342-2",
     "content": "Les dispositions législatives du présent livre sont applicables à Mayotte, à l'exception des articles L. 318-1 et L. 318-3.",
@@ -6976,5 +6970,11 @@
     "article_number": "R221-3-17",
     "content": "Est puni de l'amende prévue pour les contraventions de la 5e classe le fait : 1° D'organiser un examen de l'épreuve théorique sans disposer de l'agrément prévu à l'article L. 221-4 ou lorsque ce dernier a été suspendu ; 2° D'organiser un examen de l'épreuve théorique dans un site dont l'exploitation n'a pas été autorisé conformément à l'article R. 221-3-5 ou dont l'exploitation a été suspendue ; 3° Pour un examinateur, de superviser un examen de l'épreuve théorique générale en infraction à l'article R. 221-3-10 ; 4° De contrevenir aux dispositions de l'article R. 221-3-14 ; 5° De contrevenir aux dispositions des 2° à 12° de l' article R. 221-3-11 .",
     "context": "Code de la route > Partie réglementaire > Livre II : Le conducteur. > Titre II : Permis de conduire. > Chapitre Ier : Délivrance et catégories. > Chapitre Ier : Vérification d'aptitude, délivrance et catégories > Section 3 : Organisation des épreuves par les organismes agréés "
+  },
+  {
+    "id": "LEGIARTI000054140148",
+    "article_number": "L327-2",
+    "content": "En cas d'accord du propriétaire de céder le véhicule à l'assureur, celui-ci transmet le certificat d'immatriculation du véhicule à l'autorité administrative compétente. L'assureur doit vendre le véhicule à un acheteur professionnel pour destruction, réparation ou récupération des pièces en vue de leur revente ou reconstruction. Lorsqu'il s'agit d'une voiture particulière ou d'une camionnette destinée à la destruction ou à la récupération des pièces en vue de leur revente ou reconstruction, l'assureur remet le véhicule à un centre de véhicules hors d'usage. En cas de réparation du véhicule, celui-ci ne peut être remis en circulation et faire l'objet d'une réimmatriculation qu'au vu du rapport d'expertise certifiant que ledit véhicule a fait l'objet des réparations touchant à la sécurité prévues par le premier rapport d'expertise et qu'il est en état de circuler dans des conditions normales de sécurité.",
+    "context": "Code de la route > Partie législative > Livre 3 : Le véhicule > Titre 2 : Dispositions administratives > Chapitre 7 : Véhicules endommagés."
   }
 ]
